@@ -7,9 +7,7 @@ from sqlalchemy import select
 
 from config import settings
 from database.database import init_db, async_session_maker
-from database.models import UserPet
 from handlers import support, admin, broadcast, miniapp
-from services.pet_service import PetService
 
 
 logging.basicConfig(level=logging.INFO)
@@ -18,29 +16,10 @@ logger = logging.getLogger(__name__)
 bot = AsyncTeleBot(settings.bot_token, state_storage=StateMemoryStorage())
 
 
-async def parameter_decay_task():
-    """Фоновая задача для деградации параметров питомцев"""
-    pet_service = PetService()
-
-    while True:
-        try:
-            await asyncio.sleep(3600)
-
-            async with async_session_maker() as session:
-                result = await session.execute(select(UserPet.user_id))
-                user_ids = result.scalars().all()
-
-                for user_id in user_ids:
-                    try:
-                        await pet_service.update_parameters(user_id)
-                    except Exception as e:
-                        logger.error(f"Error updating parameters for user {user_id}: {e}")
-
-            logger.info(f"Updated parameters for {len(user_ids)} pets")
-
-        except Exception as e:
-            logger.error(f"Error in parameter decay task: {e}")
-            await asyncio.sleep(60)
+# Фоновой задачи деградации больше нет. Параметры считаются по времени
+# при каждом обращении к питомцу (PetService._apply_decay). Результат для
+# пользователя тот же, но без ежечасного прохода по всем питомцам с отдельной
+# сессией БД на каждого.
 
 
 async def queue_waiting_task():
@@ -99,7 +78,6 @@ async def main():
     broadcast.register_handlers(bot)
     miniapp.register_handlers(bot)
 
-    decay_task = asyncio.create_task(parameter_decay_task())
     queue_task = asyncio.create_task(queue_waiting_task())
 
     logger.info("Бот запущен...")
@@ -107,7 +85,6 @@ async def main():
     try:
         await bot.infinity_polling()
     finally:
-        decay_task.cancel()
         queue_task.cancel()
 
 
