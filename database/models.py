@@ -13,7 +13,12 @@ class RoleEnum(enum.Enum):
     SPEC_ADMIN = "spec_admin"
     SENIOR_ADMIN = "senior_admin"
     TECH_ADMIN = "tech_admin"
+    CO_OWNER = "co_owner"
     OWNER = "owner"
+
+
+# Владелец и совладелец. Всё, что доступно только им, проверяется этим уровнем.
+OWNER_LEVEL = 5
 
 
 class TopicStatus(enum.Enum):
@@ -60,6 +65,8 @@ class ActionType(enum.Enum):
     TOPIC_CLAIMED = "topic_claimed"
     TOPIC_CLOSED = "topic_closed"
     BROADCAST_SENT = "broadcast_sent"
+    USER_BANNED = "user_banned"
+    USER_UNBANNED = "user_unbanned"
 
 
 class User(Base):
@@ -97,6 +104,31 @@ class AdminLog(Base):
     topic_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     details: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class AdminStats(Base):
+    """Счётчик ответов админов. Отдельная таблица, а не колонка в admins,
+    потому что схема поднимается через create_all() без миграций:
+    новая таблица создастся сама, новая колонка в существующей — нет."""
+
+    __tablename__ = "admin_stats"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    messages_sent: Mapped[int] = mapped_column(Integer, default=0)
+    last_message_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+
+class Ban(Base):
+    __tablename__ = "bans"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    banned_by: Mapped[int] = mapped_column(BigInteger)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    unbanned_by: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    unbanned_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 
 class Topic(Base):
