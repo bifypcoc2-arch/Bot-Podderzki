@@ -1,0 +1,43 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cute rabbit -->
+  <!-- Body -->
+  <ellipse cx="100" cy="130" rx="45" ry="48" fill="#f3f4f6"/>
+
+  <!-- Head -->
+  <circle cx="100" cy="80" r="35" fill="#f3f4f6"/>
+
+  <!-- Ears -->
+  <ellipse cx="85" cy="35" rx="12" ry="40" fill="#f3f4f6"/>
+  <ellipse cx="115" cy="35" rx="12" ry="40" fill="#f3f4f6"/>
+  <ellipse cx="85" cy="38" rx="7" ry="30" fill="#ffc0cb"/>
+  <ellipse cx="115" cy="38" rx="7" ry="30" fill="#ffc0cb"/>
+
+  <!-- Face -->
+  <ellipse cx="88" cy="78" rx="5" ry="7" fill="#1f2937"/>
+  <ellipse cx="112" cy="78" rx="5" ry="7" fill="#1f2937"/>
+
+  <!-- Nose -->
+  <path d="M 100 88 L 97 92 L 103 92 Z" fill="#ffc0cb"/>
+
+  <!-- Mouth -->
+  <path d="M 100 92 L 100 96" stroke="#1f2937" stroke-width="1.5"/>
+  <path d="M 100 96 Q 93 99 88 97" stroke="#1f2937" stroke-width="1.5" fill="none"/>
+  <path d="M 100 96 Q 107 99 112 97" stroke="#1f2937" stroke-width="1.5" fill="none"/>
+
+  <!-- Cheeks -->
+  <circle cx="75" cy="88" r="8" fill="#ffc0cb" opacity="0.4"/>
+  <circle cx="125" cy="88" r="8" fill="#ffc0cb" opacity="0.4"/>
+
+  <!-- Whiskers -->
+  <line x1="65" y1="85" x2="45" y2="82" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="65" y1="90" x2="45" y2="92" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="135" y1="85" x2="155" y2="82" stroke="#9ca3af" stroke-width="1"/>
+  <line x1="135" y1="90" x2="155" y2="92" stroke="#9ca3af" stroke-width="1"/>
+
+  <!-- Front paws -->
+  <ellipse cx="80" cy="160" rx="12" ry="10" fill="#f3f4f6"/>
+  <ellipse cx="120" cy="160" rx="12" ry="10" fill="#f3f4f6"/>
+
+  <!-- Fluffy tail -->
+  <circle cx="100" cy="170" r="15" fill="#f3f4f6"/>
+</svg>

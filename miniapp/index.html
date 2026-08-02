@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Питомец</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <div id="loading">Загрузка...</div>
+
+        <div id="content" style="display: none;">
+            <nav id="navigation">
+                <button data-page="pet" class="nav-btn active">Питомец</button>
+                <button data-page="games" class="nav-btn">Игры</button>
+                <button data-page="home" class="nav-btn">Дом</button>
+                <button data-page="shop" class="nav-btn">Магазин</button>
+                <button data-page="profile" class="nav-btn">Профиль</button>
+            </nav>
+
+            <main id="main-content">
+                <section id="pet-page" class="page active">
+                    <div id="pet-display">
+                        <div id="pet-avatar">🥚</div>
+                        <div id="pet-info">
+                            <p>Стадия: <span id="pet-stage">-</span></p>
+                            <p>Вид: <span id="pet-type">-</span></p>
+                            <p>XP: <span id="pet-xp">0</span></p>
+                        </div>
+                    </div>
+
+                    <div id="pet-parameters">
+                        <div class="param">
+                            <label>Голод:</label>
+                            <progress id="hunger" max="100" value="100"></progress>
+                            <span id="hunger-value">100</span>
+                        </div>
+                        <div class="param">
+                            <label>Счастье:</label>
+                            <progress id="happiness" max="100" value="100"></progress>
+                            <span id="happiness-value">100</span>
+                        </div>
+                        <div class="param">
+                            <label>Гигиена:</label>
+                            <progress id="hygiene" max="100" value="100"></progress>
+                            <span id="hygiene-value">100</span>
+                        </div>
+                        <div class="param">
+                            <label>Энергия:</label>
+                            <progress id="energy" max="100" value="100"></progress>
+                            <span id="energy-value">100</span>
+                        </div>
+                        <div class="param">
+                            <label>Дисциплина:</label>
+                            <progress id="discipline" max="100" value="100"></progress>
+                            <span id="discipline-value">100</span>
+                        </div>
+                        <div class="param">
+                            <label>Лапки:</label>
+                            <progress id="strength" max="100" value="0"></progress>
+                            <span id="strength-value">0</span>
+                        </div>
+                    </div>
+
+                    <div id="pet-actions">
+                        <button onclick="performAction('feed')" class="action-btn">Покормить</button>
+                        <button onclick="performAction('play')" class="action-btn">Поиграть</button>
+                        <button onclick="performAction('wash')" class="action-btn">Помыть</button>
+                        <button onclick="performAction('sleep')" class="action-btn">Спать</button>
+                        <button onclick="performAction('train')" class="action-btn">Тренировать</button>
+                    </div>
+                </section>
+
+                <section id="games-page" class="page">
+                    <h2>Мини-игры</h2>
+                    <div class="games-list">
+                        <button class="game-card">Призрачный куб</button>
+                        <button class="game-card">Шёпот цифр</button>
+                        <button class="game-card">Проклятая загадка</button>
+                    </div>
+                </section>
+
+                <section id="home-page" class="page">
+                    <h2>Дом</h2>
+                    <div id="home-background">
+                        <p>Выбранный фон будет отображаться здесь</p>
+                    </div>
+                </section>
+
+                <section id="shop-page" class="page">
+                    <h2>Магазин</h2>
+                    <div class="currency-display">
+                        Монеты: <span id="currency">0</span>
+                    </div>
+                    <div id="shop-items"></div>
+                </section>
+
+                <section id="profile-page" class="page">
+                    <h2>Профиль</h2>
+                    <div id="stats">
+                        <p>Сообщений: <span id="stat-messages">0</span></p>
+                        <p>Игр сыграно: <span id="stat-games">0</span></p>
+                        <p>Побед: <span id="stat-wins">0</span></p>
+                        <p>Серия побед: <span id="stat-streak">0</span></p>
+                        <p>Кормлений: <span id="stat-feedings">0</span></p>
+                        <p>Купаний: <span id="stat-baths">0</span></p>
+                        <p>Снов: <span id="stat-sleeps">0</span></p>
+                        <p>Тренировок: <span id="stat-trainings">0</span></p>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

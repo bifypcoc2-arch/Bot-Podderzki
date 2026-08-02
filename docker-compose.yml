@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: telegram_support_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./bot.db:/app/bot.db
+    depends_on:
+      - web
+
+  web:
+    build: .
+    container_name: miniapp_web_server
+    restart: unless-stopped
+    command: python web_server.py
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./bot.db:/app/bot.db
+
+volumes:
+  bot_data:

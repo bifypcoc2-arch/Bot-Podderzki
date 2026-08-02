@@ -1,0 +1,41 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cute hedgehog -->
+  <!-- Body with spikes -->
+  <ellipse cx="100" cy="120" rx="50" ry="45" fill="#92400e"/>
+
+  <!-- Spikes -->
+  <path d="M 60 100 L 50 90 L 60 95 Z" fill="#78350f"/>
+  <path d="M 70 90 L 65 75 L 72 85 Z" fill="#78350f"/>
+  <path d="M 85 80 L 85 65 L 88 78 Z" fill="#78350f"/>
+  <path d="M 100 75 L 102 60 L 103 75 Z" fill="#78350f"/>
+  <path d="M 115 80 L 115 65 L 112 78 Z" fill="#78350f"/>
+  <path d="M 130 90 L 135 75 L 128 85 Z" fill="#78350f"/>
+  <path d="M 140 100 L 150 90 L 140 95 Z" fill="#78350f"/>
+  <path d="M 55 115 L 40 110 L 52 115 Z" fill="#78350f"/>
+  <path d="M 145 115 L 160 110 L 148 115 Z" fill="#78350f"/>
+  <path d="M 65 135 L 52 138 L 64 137 Z" fill="#78350f"/>
+  <path d="M 135 135 L 148 138 L 136 137 Z" fill="#78350f"/>
+
+  <!-- Face -->
+  <ellipse cx="100" cy="115" rx="35" ry="30" fill="#d4a574"/>
+
+  <!-- Snout -->
+  <ellipse cx="100" cy="125" rx="20" ry="15" fill="#c4915c"/>
+
+  <!-- Eyes -->
+  <circle cx="88" cy="110" r="5" fill="#1f2937"/>
+  <circle cx="112" cy="110" r="5" fill="#1f2937"/>
+  <circle cx="90" cy="108" r="2" fill="#ffffff"/>
+  <circle cx="114" cy="108" r="2" fill="#ffffff"/>
+
+  <!-- Nose -->
+  <ellipse cx="100" cy="128" rx="5" ry="4" fill="#1f2937"/>
+
+  <!-- Feet -->
+  <ellipse cx="80" cy="160" rx="10" ry="8" fill="#c4915c"/>
+  <ellipse cx="120" cy="160" rx="10" ry="8" fill="#c4915c"/>
+
+  <!-- Cheeks -->
+  <circle cx="72" cy="118" r="6" fill="#ffc0cb" opacity="0.4"/>
+  <circle cx="128" cy="118" r="6" fill="#ffc0cb" opacity="0.4"/>
+</svg>

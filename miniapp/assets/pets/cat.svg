@@ -1,0 +1,36 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cute cat -->
+  <!-- Body -->
+  <ellipse cx="100" cy="120" rx="45" ry="50" fill="#fbbf24"/>
+
+  <!-- Head -->
+  <circle cx="100" cy="70" r="35" fill="#fbbf24"/>
+
+  <!-- Ears -->
+  <path d="M 70 55 L 65 30 L 80 50 Z" fill="#fbbf24"/>
+  <path d="M 130 55 L 135 30 L 120 50 Z" fill="#fbbf24"/>
+  <path d="M 70 50 L 68 35 L 77 48 Z" fill="#fef3c7"/>
+  <path d="M 130 50 L 132 35 L 123 48 Z" fill="#fef3c7"/>
+
+  <!-- Face -->
+  <ellipse cx="88" cy="68" rx="5" ry="7" fill="#1f2937"/>
+  <ellipse cx="112" cy="68" rx="5" ry="7" fill="#1f2937"/>
+  <path d="M 100 75 L 95 80 Q 100 82 105 80 Z" fill="#f59e0b" stroke="#d97706" stroke-width="1"/>
+
+  <!-- Whiskers -->
+  <line x1="70" y1="75" x2="50" y2="72" stroke="#1f2937" stroke-width="1.5"/>
+  <line x1="70" y1="80" x2="50" y2="82" stroke="#1f2937" stroke-width="1.5"/>
+  <line x1="130" y1="75" x2="150" y2="72" stroke="#1f2937" stroke-width="1.5"/>
+  <line x1="130" y1="80" x2="150" y2="82" stroke="#1f2937" stroke-width="1.5"/>
+
+  <!-- Stripes on head -->
+  <path d="M 85 60 Q 100 58 115 60" stroke="#f59e0b" stroke-width="2" fill="none"/>
+  <path d="M 80 50 Q 100 48 120 50" stroke="#f59e0b" stroke-width="2" fill="none"/>
+
+  <!-- Paws -->
+  <ellipse cx="75" cy="165" rx="12" ry="8" fill="#fbbf24"/>
+  <ellipse cx="125" cy="165" rx="12" ry="8" fill="#fbbf24"/>
+
+  <!-- Tail -->
+  <path d="M 140 130 Q 160 120 170 140 Q 165 155 155 150" fill="#fbbf24" stroke="#f59e0b" stroke-width="2"/>
+</svg>

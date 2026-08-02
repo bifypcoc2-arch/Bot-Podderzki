@@ -1,0 +1,39 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cute panda -->
+  <!-- Body -->
+  <ellipse cx="100" cy="130" rx="50" ry="50" fill="#f3f4f6"/>
+
+  <!-- Head -->
+  <circle cx="100" cy="75" r="40" fill="#f3f4f6"/>
+
+  <!-- Ears -->
+  <circle cx="70" cy="50" r="18" fill="#1f2937"/>
+  <circle cx="130" cy="50" r="18" fill="#1f2937"/>
+
+  <!-- Eye patches -->
+  <ellipse cx="82" cy="70" rx="16" ry="20" fill="#1f2937"/>
+  <ellipse cx="118" cy="70" rx="16" ry="20" fill="#1f2937"/>
+
+  <!-- Eyes -->
+  <circle cx="82" cy="72" r="7" fill="#f3f4f6"/>
+  <circle cx="118" cy="72" r="7" fill="#f3f4f6"/>
+  <circle cx="84" cy="72" r="4" fill="#1f2937"/>
+  <circle cx="120" cy="72" r="4" fill="#1f2937"/>
+
+  <!-- Nose and mouth -->
+  <ellipse cx="100" cy="88" rx="8" ry="6" fill="#1f2937"/>
+  <path d="M 100 88 L 100 95" stroke="#1f2937" stroke-width="2.5"/>
+  <path d="M 100 95 Q 93 98 88 96" stroke="#1f2937" stroke-width="2.5" fill="none"/>
+  <path d="M 100 95 Q 107 98 112 96" stroke="#1f2937" stroke-width="2.5" fill="none"/>
+
+  <!-- Arms -->
+  <ellipse cx="60" cy="130" rx="20" ry="35" fill="#1f2937"/>
+  <ellipse cx="140" cy="130" rx="20" ry="35" fill="#1f2937"/>
+
+  <!-- Legs -->
+  <ellipse cx="80" cy="165" rx="18" ry="12" fill="#1f2937"/>
+  <ellipse cx="120" cy="165" rx="18" ry="12" fill="#1f2937"/>
+
+  <!-- Belly patch -->
+  <ellipse cx="100" cy="140" rx="30" ry="35" fill="#e5e7eb"/>
+</svg>

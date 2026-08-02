@@ -1,0 +1,41 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cute dog -->
+  <!-- Body -->
+  <ellipse cx="100" cy="125" rx="50" ry="45" fill="#d97706"/>
+
+  <!-- Head -->
+  <circle cx="100" cy="75" r="38" fill="#d97706"/>
+
+  <!-- Ears -->
+  <ellipse cx="70" cy="65" rx="18" ry="28" fill="#d97706" transform="rotate(-20 70 65)"/>
+  <ellipse cx="130" cy="65" rx="18" ry="28" fill="#d97706" transform="rotate(20 130 65)"/>
+  <ellipse cx="70" cy="70" rx="10" ry="18" fill="#f59e0b" transform="rotate(-20 70 70)"/>
+  <ellipse cx="130" cy="70" rx="10" ry="18" fill="#f59e0b" transform="rotate(20 130 70)"/>
+
+  <!-- Snout -->
+  <ellipse cx="100" cy="85" rx="22" ry="18" fill="#fbbf24"/>
+
+  <!-- Face -->
+  <ellipse cx="88" cy="70" rx="5" ry="7" fill="#1f2937"/>
+  <ellipse cx="112" cy="70" rx="5" ry="7" fill="#1f2937"/>
+  <circle cx="100" cy="88" r="6" fill="#1f2937"/>
+  <line x1="100" y1="88" x2="100" y2="96" stroke="#1f2937" stroke-width="2"/>
+  <path d="M 100 96 Q 95 100 90 98" stroke="#1f2937" stroke-width="2" fill="none"/>
+  <path d="M 100 96 Q 105 100 110 98" stroke="#1f2937" stroke-width="2" fill="none"/>
+
+  <!-- Tongue -->
+  <ellipse cx="100" cy="102" rx="8" ry="6" fill="#f87171"/>
+
+  <!-- Spots -->
+  <ellipse cx="120" cy="55" rx="10" ry="12" fill="#92400e" opacity="0.3"/>
+  <ellipse cx="75" cy="120" rx="15" ry="18" fill="#92400e" opacity="0.3"/>
+
+  <!-- Paws -->
+  <ellipse cx="75" cy="165" rx="13" ry="8" fill="#d97706"/>
+  <ellipse cx="125" cy="165" rx="13" ry="8" fill="#d97706"/>
+
+  <!-- Tail -->
+  <path d="M 145 120 Q 170 110 180 130 Q 175 140 165 135" fill="#d97706">
+    <animateTransform attributeName="transform" type="rotate" values="0 145 120;10 145 120;0 145 120" dur="1.5s" repeatCount="indefinite"/>
+  </path>
+</svg>

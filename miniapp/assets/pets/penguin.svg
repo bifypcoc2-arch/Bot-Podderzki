@@ -1,0 +1,44 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cute penguin -->
+  <!-- Body -->
+  <ellipse cx="100" cy="125" rx="50" ry="60" fill="#1f2937"/>
+
+  <!-- Belly -->
+  <ellipse cx="100" cy="130" rx="35" ry="50" fill="#f3f4f6"/>
+
+  <!-- Head -->
+  <circle cx="100" cy="70" r="38" fill="#1f2937"/>
+
+  <!-- Face patch -->
+  <ellipse cx="100" cy="75" rx="28" ry="32" fill="#f3f4f6"/>
+
+  <!-- Beak -->
+  <ellipse cx="100" cy="85" rx="12" ry="8" fill="#fb923c"/>
+  <path d="M 100 85 L 95 88 L 105 88 Z" fill="#f97316"/>
+
+  <!-- Eyes -->
+  <ellipse cx="88" cy="70" rx="8" ry="10" fill="#ffffff"/>
+  <ellipse cx="112" cy="70" rx="8" ry="10" fill="#ffffff"/>
+  <circle cx="90" cy="72" r="5" fill="#1f2937"/>
+  <circle cx="114" cy="72" r="5" fill="#1f2937"/>
+  <circle cx="92" cy="70" r="2" fill="#ffffff"/>
+  <circle cx="116" cy="70" r="2" fill="#ffffff"/>
+
+  <!-- Wings/Flippers -->
+  <ellipse cx="55" cy="120" rx="15" ry="45" fill="#1f2937" transform="rotate(-25 55 120)"/>
+  <ellipse cx="145" cy="120" rx="15" ry="45" fill="#1f2937" transform="rotate(25 145 120)"/>
+
+  <!-- Feet -->
+  <ellipse cx="85" cy="180" rx="18" ry="10" fill="#fb923c"/>
+  <ellipse cx="115" cy="180" rx="18" ry="10" fill="#fb923c"/>
+  <path d="M 75 180 L 70 185" stroke="#f97316" stroke-width="2"/>
+  <path d="M 82 180 L 80 186" stroke="#f97316" stroke-width="2"/>
+  <path d="M 88 180 L 88 186" stroke="#f97316" stroke-width="2"/>
+  <path d="M 125 180 L 130 185" stroke="#f97316" stroke-width="2"/>
+  <path d="M 118 180 L 120 186" stroke="#f97316" stroke-width="2"/>
+  <path d="M 112 180 L 112 186" stroke="#f97316" stroke-width="2"/>
+
+  <!-- Eyebrows for cute expression -->
+  <path d="M 80 64 Q 85 62 90 64" stroke="#1f2937" stroke-width="2" fill="none"/>
+  <path d="M 110 64 Q 115 62 120 64" stroke="#1f2937" stroke-width="2" fill="none"/>
+</svg>

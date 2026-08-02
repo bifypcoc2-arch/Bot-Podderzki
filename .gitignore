@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+*.db
+*.db-journal
+venv/
+env/
+.vscode/
+.idea/
+*.log
+alembic/versions/*.py
+!alembic/versions/__init__.py

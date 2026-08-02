@@ -1,0 +1,38 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Cute fox -->
+  <!-- Body -->
+  <ellipse cx="100" cy="130" rx="45" ry="40" fill="#f97316"/>
+  <ellipse cx="100" cy="135" rx="35" ry="30" fill="#fef3c7"/>
+
+  <!-- Head -->
+  <circle cx="100" cy="75" r="35" fill="#f97316"/>
+
+  <!-- Ears -->
+  <path d="M 75 50 L 65 20 L 85 45 Z" fill="#f97316"/>
+  <path d="M 125 50 L 135 20 L 115 45 Z" fill="#f97316"/>
+  <path d="M 75 48 L 70 30 L 82 45 Z" fill="#1f2937"/>
+  <path d="M 125 48 L 130 30 L 118 45 Z" fill="#1f2937"/>
+
+  <!-- Snout -->
+  <ellipse cx="100" cy="80" rx="20" ry="15" fill="#fef3c7"/>
+
+  <!-- Face -->
+  <ellipse cx="88" cy="70" rx="5" ry="7" fill="#1f2937"/>
+  <ellipse cx="112" cy="70" rx="5" ry="7" fill="#1f2937"/>
+  <path d="M 100 82 L 95 85 Q 100 87 105 85 Z" fill="#1f2937"/>
+
+  <!-- Cheek tufts -->
+  <ellipse cx="70" cy="75" rx="12" ry="15" fill="#fef3c7"/>
+  <ellipse cx="130" cy="75" rx="12" ry="15" fill="#fef3c7"/>
+
+  <!-- Chest -->
+  <ellipse cx="100" cy="110" rx="25" ry="30" fill="#fef3c7"/>
+
+  <!-- Paws -->
+  <ellipse cx="80" cy="165" rx="10" ry="8" fill="#1f2937"/>
+  <ellipse cx="120" cy="165" rx="10" ry="8" fill="#1f2937"/>
+
+  <!-- Tail -->
+  <path d="M 140 130 Q 175 125 185 150 Q 180 165 170 155 Q 165 150 160 145" fill="#f97316"/>
+  <path d="M 175 150 Q 180 160 172 165 Q 168 163 170 157" fill="#fef3c7"/>
+</svg>

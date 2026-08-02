@@ -1,0 +1,218 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--tg-theme-bg-color, #ffffff);
+    color: var(--tg-theme-text-color, #000000);
+    padding-bottom: 80px;
+}
+
+#loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-size: 18px;
+}
+
+#navigation {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+    background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+    border-top: 1px solid var(--tg-theme-hint-color, #ccc);
+    padding: 10px 0;
+    z-index: 100;
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    color: var(--tg-theme-text-color, #000);
+    font-size: 12px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.nav-btn.active {
+    color: var(--tg-theme-button-color, #0088cc);
+    font-weight: bold;
+}
+
+.page {
+    display: none;
+    padding: 20px;
+}
+
+.page.active {
+    display: block;
+}
+
+#pet-display {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+#pet-avatar {
+    font-size: 120px;
+    margin: 20px 0;
+}
+
+#pet-info {
+    font-size: 16px;
+    line-height: 1.8;
+}
+
+#pet-parameters {
+    margin-bottom: 30px;
+}
+
+.param {
+    margin-bottom: 15px;
+}
+
+.param label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.param progress {
+    width: 100%;
+    height: 20px;
+    border-radius: 10px;
+}
+
+.param progress::-webkit-progress-bar {
+    background-color: #e0e0e0;
+    border-radius: 10px;
+}
+
+.param progress::-webkit-progress-value {
+    background-color: var(--tg-theme-button-color, #0088cc);
+    border-radius: 10px;
+}
+
+.param span {
+    margin-left: 10px;
+    font-weight: bold;
+}
+
+#pet-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.action-btn {
+    background: var(--tg-theme-button-color, #0088cc);
+    color: var(--tg-theme-button-text-color, #ffffff);
+    border: none;
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.action-btn:active {
+    opacity: 0.7;
+}
+
+.games-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.game-card {
+    background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+    border: 1px solid var(--tg-theme-hint-color, #ccc);
+    padding: 20px;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.game-card:active {
+    transform: scale(0.98);
+}
+
+#home-background {
+    text-align: center;
+    padding: 50px 20px;
+    background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+    border-radius: 10px;
+    min-height: 300px;
+}
+
+.currency-display {
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: var(--tg-theme-button-color, #0088cc);
+}
+
+#shop-items {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.shop-item {
+    background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+    border: 1px solid var(--tg-theme-hint-color, #ccc);
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.shop-item h3 {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.shop-item p {
+    font-size: 12px;
+    margin-bottom: 10px;
+    color: var(--tg-theme-hint-color, #999);
+}
+
+.shop-item button {
+    background: var(--tg-theme-button-color, #0088cc);
+    color: var(--tg-theme-button-text-color, #ffffff);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+#stats {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#stats p {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+    border-radius: 5px;
+}
+
+h2 {
+    margin-bottom: 20px;
+    font-size: 24px;
+}

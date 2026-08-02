@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой Питомец</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .currency {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f5f5f5;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .pet-display {
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        .pet-svg {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+
+        .pet-info {
+            margin-top: 20px;
+        }
+
+        .pet-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .pet-stage {
+            font-size: 14px;
+            color: #666;
+            background: #f0f0f0;
+            padding: 5px 15px;
+            border-radius: 15px;
+            display: inline-block;
+        }
+
+        .stats {
+            margin-top: 30px;
+        }
+
+        .stat {
+            margin-bottom: 15px;
+        }
+
+        .stat-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .stat-bar {
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .stat-fill {
+            height: 100%;
+            transition: width 0.3s;
+            border-radius: 10px;
+        }
+
+        .stat-fill.hunger { background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%); }
+        .stat-fill.happiness { background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); }
+        .stat-fill.hygiene { background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%); }
+        .stat-fill.energy { background: linear-gradient(90deg, #fa709a 0%, #fee140 100%); }
+        .stat-fill.discipline { background: linear-gradient(90deg, #30cfd0 0%, #330867 100%); }
+        .stat-fill.strength { background: linear-gradient(90deg, #a8edea 0%, #fed6e3 100%); }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .action-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .action-btn.feed { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .action-btn.play { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .action-btn.wash { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .action-btn.sleep { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .action-btn.train { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+
+        .shop-items {
+            display: grid;
+            gap: 15px;
+        }
+
+        .shop-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-info h3 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .item-info p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .item-price {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .buy-btn {
+            margin-left: 10px;
+            padding: 8px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .games {
+            display: grid;
+            gap: 15px;
+        }
+
+        .game-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .game-card h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .game-card p {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .game-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .game-btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐾 Мой Питомец</h1>
+            <div class="currency">💰 Монеты: <span id="currency">150</span></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('pet')">Питомец</button>
+            <button class="tab" onclick="switchTab('shop')">Магазин</button>
+            <button class="tab" onclick="switchTab('games')">Игры</button>
+            <button class="tab" onclick="switchTab('stats')">Статистика</button>
+        </div>
+
+        <div class="content">
+            <!-- Pet Tab -->
+            <div id="pet-tab" class="tab-content active">
+                <div class="pet-display">
+                    <div class="pet-svg" id="petImage"></div>
+                    <div class="pet-info">
+                        <div class="pet-name">Котёнок</div>
+                        <div class="pet-stage">Детство • XP: 45/100</div>
+                    </div>
+                </div>
+
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-label">
+                            <span>Голод 🍖</span>
+                            <span id="hunger-value">75%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-fill hunger" id="hunger-bar" style="width: 75%"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat">
+                        <div class="stat-label">
+                            <span>Счастье 😊</span>
+                            <span id="happiness-value">80%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-fill happiness" id="happiness-bar" style="width: 80%"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat">
+                        <div class="stat-label">
+                            <span>Гигиена 🛁</span>
+                            <span id="hygiene-value">60%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-fill hygiene" id="hygiene-bar" style="width: 60%"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat">
+                        <div class="stat-label">
+                            <span>Энергия ⚡</span>
+                            <span id="energy-value">65%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-fill energy" id="energy-bar" style="width: 65%"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat">
+                        <div class="stat-label">
+                            <span>Дисциплина 📚</span>
+                            <span id="discipline-value">50%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-fill discipline" id="discipline-bar" style="width: 50%"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat">
+                        <div class="stat-label">
+                            <span>Сила 💪</span>
+                            <span id="strength-value">40%</span>
+                        </div>
+                        <div class="stat-bar">
+                            <div class="stat-fill strength" id="strength-bar" style="width: 40%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="action-btn feed" onclick="performAction('feed')">🍖 Покормить</button>
+                    <button class="action-btn play" onclick="performAction('play')">🎾 Играть</button>
+                    <button class="action-btn wash" onclick="performAction('wash')">🛁 Помыть</button>
+                    <button class="action-btn sleep" onclick="performAction('sleep')">😴 Спать</button>
+                    <button class="action-btn train" onclick="performAction('train')">📚 Тренировать</button>
+                </div>
+
+                <div id="action-message"></div>
+            </div>
+
+            <!-- Shop Tab -->
+            <div id="shop-tab" class="tab-content">
+                <div class="shop-items">
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <h3>🥩 Премиум корм</h3>
+                            <p>Восстанавливает 30 голода</p>
+                        </div>
+                        <div>
+                            <span class="item-price">50💰</span>
+                            <button class="buy-btn" onclick="buyItem('Премиум корм', 50)">Купить</button>
+                        </div>
+                    </div>
+
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <h3>🎾 Супер мяч</h3>
+                            <p>Восстанавливает 25 счастья</p>
+                        </div>
+                        <div>
+                            <span class="item-price">40💰</span>
+                            <button class="buy-btn" onclick="buyItem('Супер мяч', 40)">Купить</button>
+                        </div>
+                    </div>
+
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <h3>🎀 Красная лента</h3>
+                            <p>Украшение: +5 счастье</p>
+                        </div>
+                        <div>
+                            <span class="item-price">100💰</span>
+                            <button class="buy-btn" onclick="buyItem('Красная лента', 100)">Купить</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="shop-message"></div>
+            </div>
+
+            <!-- Games Tab -->
+            <div id="games-tab" class="tab-content">
+                <div class="games">
+                    <div class="game-card">
+                        <h3>🎲 Призрачный кубик</h3>
+                        <p>Угадай число от 1 до 6. Выигрыш: 30💰</p>
+                        <div class="game-controls">
+                            <button class="game-btn" onclick="playGame('cube', 1)">1</button>
+                            <button class="game-btn" onclick="playGame('cube', 2)">2</button>
+                            <button class="game-btn" onclick="playGame('cube', 3)">3</button>
+                            <button class="game-btn" onclick="playGame('cube', 4)">4</button>
+                            <button class="game-btn" onclick="playGame('cube', 5)">5</button>
+                            <button class="game-btn" onclick="playGame('cube', 6)">6</button>
+                        </div>
+                        <div id="cube-result"></div>
+                    </div>
+
+                    <div class="game-card">
+                        <h3>🔮 Шёпот чисел</h3>
+                        <p>Угадай число от 1 до 10. Выигрыш: 50💰</p>
+                        <div class="game-controls">
+                            <button class="game-btn" onclick="playGame('whisper', 1)">1</button>
+                            <button class="game-btn" onclick="playGame('whisper', 2)">2</button>
+                            <button class="game-btn" onclick="playGame('whisper', 3)">3</button>
+                            <button class="game-btn" onclick="playGame('whisper', 4)">4</button>
+                            <button class="game-btn" onclick="playGame('whisper', 5)">5</button>
+                            <button class="game-btn" onclick="playGame('whisper', 6)">6</button>
+                            <button class="game-btn" onclick="playGame('whisper', 7)">7</button>
+                            <button class="game-btn" onclick="playGame('whisper', 8)">8</button>
+                            <button class="game-btn" onclick="playGame('whisper', 9)">9</button>
+                            <button class="game-btn" onclick="playGame('whisper', 10)">10</button>
+                        </div>
+                        <div id="whisper-result"></div>
+                    </div>
+
+                    <div class="game-card">
+                        <h3>🌙 Проклятая загадка</h3>
+                        <p>Выбери ответ A, B или C. Выигрыш: 20💰</p>
+                        <div class="game-controls">
+                            <button class="game-btn" onclick="playGame('riddle', 'A')">A</button>
+                            <button class="game-btn" onclick="playGame('riddle', 'B')">B</button>
+                            <button class="game-btn" onclick="playGame('riddle', 'C')">C</button>
+                        </div>
+                        <div id="riddle-result"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Tab -->
+            <div id="stats-tab" class="tab-content">
+                <div class="stats">
+                    <h3 style="margin-bottom: 20px; color: #667eea;">📊 Общая статистика</h3>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Отправлено сообщений</span>
+                            <strong>42</strong>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Игр сыграно</span>
+                            <strong>15</strong>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Игр выиграно</span>
+                            <strong>8</strong>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Текущая серия побед</span>
+                            <strong>3 🔥</strong>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Кормлений</span>
+                            <strong>28</strong>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Купаний</span>
+                            <strong>12</strong>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Сеансов сна</span>
+                            <strong>18</strong>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Тренировок</span>
+                            <strong>10</strong>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Серия входов</span>
+                            <strong>5 дней 🌟</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load pet SVG
+        fetch('assets/pets/cat.svg')
+            .then(r => r.text())
+            .then(svg => {
+                document.getElementById('petImage').innerHTML = svg;
+            });
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function performAction(action) {
+            const actions = {
+                feed: { param: 'hunger', value: 75, delta: 15, text: 'Покормили питомца!' },
+                play: { param: 'happiness', value: 80, delta: 10, text: 'Поиграли с питомцем!' },
+                wash: { param: 'hygiene', value: 60, delta: 20, text: 'Помыли питомца!' },
+                sleep: { param: 'energy', value: 65, delta: 25, text: 'Питомец отдохнул!' },
+                train: { param: 'discipline', value: 50, delta: 10, text: 'Потренировали питомца!' }
+            };
+
+            const act = actions[action];
+            const newValue = Math.min(100, act.value + act.delta);
+
+            document.getElementById(act.param + '-bar').style.width = newValue + '%';
+            document.getElementById(act.param + '-value').textContent = newValue + '%';
+
+            showMessage('action-message', act.text, 'success');
+        }
+
+        function buyItem(name, price) {
+            const currencyEl = document.getElementById('currency');
+            const current = parseInt(currencyEl.textContent);
+
+            if (current >= price) {
+                currencyEl.textContent = current - price;
+                showMessage('shop-message', `Куплено: ${name}!`, 'success');
+            } else {
+                showMessage('shop-message', 'Недостаточно монет!', 'error');
+            }
+        }
+
+        function playGame(game, guess) {
+            const games = {
+                cube: { max: 6, reward: 30, result: 'cube-result' },
+                whisper: { max: 10, reward: 50, result: 'whisper-result' },
+                riddle: { max: 3, reward: 20, result: 'riddle-result', options: ['A', 'B', 'C'] }
+            };
+
+            const g = games[game];
+            let correct;
+
+            if (game === 'riddle') {
+                correct = g.options[Math.floor(Math.random() * 3)];
+            } else {
+                correct = Math.floor(Math.random() * g.max) + 1;
+            }
+
+            const won = guess == correct;
+            const currencyEl = document.getElementById('currency');
+
+            if (won) {
+                currencyEl.textContent = parseInt(currencyEl.textContent) + g.reward;
+                showMessage(g.result, `Выиграл! Правильный ответ: ${correct}. +${g.reward}💰`, 'success');
+            } else {
+                showMessage(g.result, `Проиграл! Правильный ответ: ${correct}`, 'error');
+            }
+        }
+
+        function showMessage(elementId, text, type) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = `<div class="message ${type}">${text}</div>`;
+            setTimeout(() => el.innerHTML = '', 3000);
+        }
+    </script>
+</body>
+</html>
