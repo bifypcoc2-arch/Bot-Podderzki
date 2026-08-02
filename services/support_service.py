@@ -9,6 +9,7 @@ from database.models import User, Topic, TopicStatus, Stats
 from database.database import async_session_maker
 from services.anonymity import anonymous_code
 from services.moderation_service import ModerationService
+from services.telegram_errors import is_thread_missing
 from config import settings
 
 
@@ -28,16 +29,38 @@ class SupportService:
         Возвращает False, если пользователь заблокирован — тогда ни тема,
         ни сообщение в форум не попадают.
         """
-        if await self.is_user_banned(message.from_user.id):
+        user_id = message.from_user.id
+
+        if await self.is_user_banned(user_id):
             return False
 
         async with async_session_maker() as session:
-            user = await self._get_or_create_user(session, message.from_user)
+            await self._get_or_create_user(session, message.from_user)
             await session.commit()
 
-            topic_id = await self._get_or_create_topic(session, user.user_id, bot)
-            await self._increment_message_count(session, user.user_id)
+            topic_id = await self._get_or_create_topic(session, user_id, bot)
+            await self._increment_message_count(session, user_id)
 
+        try:
+            await self._copy_to_topic(message, bot, topic_id)
+        except Exception as error:
+            if not is_thread_missing(error):
+                raise
+
+            # Тему удалили в Telegram руками, а в базе она числится открытой.
+            # Без этой ветки пользователь навсегда терял связь с поддержкой:
+            # каждое его сообщение падало с той же ошибкой.
+            logger.warning(f"Topic {topic_id} is gone, recreating for user {user_id}")
+
+            async with async_session_maker() as session:
+                await self._mark_topic_closed(session, topic_id)
+                new_topic_id = await self._get_or_create_topic(session, user_id, bot)
+
+            await self._copy_to_topic(message, bot, new_topic_id)
+
+        return True
+
+    async def _copy_to_topic(self, message: Message, bot: AsyncTeleBot, topic_id: int):
         # copy_message, а не forward_message: копия не содержит ссылки на автора,
         # поэтому в топике личность пользователя не раскрывается.
         await bot.copy_message(
@@ -47,7 +70,15 @@ class SupportService:
             message_thread_id=topic_id
         )
 
-        return True
+    async def _mark_topic_closed(self, session: AsyncSession, topic_id: int):
+        result = await session.execute(
+            select(Topic).where(Topic.topic_id == topic_id)
+        )
+        topic = result.scalars().first()
+
+        if topic:
+            topic.status = TopicStatus.CLOSED
+            await session.commit()
 
     async def _get_or_create_user(self, session: AsyncSession, from_user) -> User:
         result = await session.execute(

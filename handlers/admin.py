@@ -30,6 +30,17 @@ def register_handlers(bot: AsyncTeleBot):
         admin_service = AdminService()
         await admin_service.unset_topic_spec(message, bot)
 
+    @bot.message_handler(commands=['close'])
+    async def cmd_close(message: Message):
+        # Закрыть обращение может любой админ: это рутинное действие,
+        # а не привилегия. Закрытие обратимо — пользователь просто напишет снова.
+        if not await role_filter(message, min_level=1):
+            await bot.reply_to(message, NO_ACCESS)
+            return
+
+        admin_service = AdminService()
+        await admin_service.close_topic(message, bot)
+
     @bot.message_handler(commands=['ban'])
     async def cmd_ban(message: Message):
         if not await role_filter(message, min_level=OWNER_LEVEL):

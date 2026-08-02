@@ -4,12 +4,20 @@ from telebot.async_telebot import AsyncTeleBot
 from telebot.types import Message
 from sqlalchemy import select
 
+from config import settings
 from database.models import Admin, Topic, TopicStatus, AdminLog, ActionType
 from database.database import async_session_maker
 from services.moderation_service import ModerationService
+from services.telegram_errors import is_thread_missing, is_user_unreachable
 
 
 logger = logging.getLogger(__name__)
+
+
+CLOSED_NOTICE = (
+    "✅ Обращение закрыто.\n"
+    "Если вопрос остался — просто напишите снова, мы откроем новое."
+)
 
 
 class AdminService:
@@ -70,6 +78,70 @@ class AdminService:
                 await session.commit()
                 await bot.reply_to(message, "✅ Режим SPEC снят")
 
+    async def close_topic(self, message: Message, bot: AsyncTeleBot):
+        """Закрывает обращение.
+
+        После этого следующее сообщение пользователя создаст новую тему:
+        _get_or_create_topic ищет только темы со статусом не CLOSED.
+        """
+        if not message.message_thread_id:
+            await bot.reply_to(message, "Эта команда доступна только в теме обращения.")
+            return
+
+        async with async_session_maker() as session:
+            result = await session.execute(
+                select(Topic).where(Topic.topic_id == message.message_thread_id)
+            )
+            topic = result.scalar_one_or_none()
+
+            if not topic:
+                await bot.reply_to(message, "Эта тема не связана ни с одним обращением.")
+                return
+
+            if topic.status == TopicStatus.CLOSED:
+                await bot.reply_to(message, "Обращение уже закрыто.")
+                return
+
+            user_id = topic.user_id
+            topic.status = TopicStatus.CLOSED
+
+            log_entry = AdminLog(
+                admin_user_id=message.from_user.id,
+                action_type=ActionType.TOPIC_CLOSED,
+                topic_id=topic.id,
+                details=f"User {user_id}"
+            )
+            session.add(log_entry)
+
+            await session.commit()
+
+        # Уведомление пользователя не отменяет закрытие: если он заблокировал бота,
+        # тема всё равно должна закрыться.
+        try:
+            await bot.send_message(user_id, CLOSED_NOTICE)
+        except Exception as error:
+            if is_user_unreachable(error):
+                logger.info(f"User {user_id} is unreachable, close notice skipped")
+            else:
+                logger.error(f"Failed to notify user {user_id} about close: {error}")
+
+        # Сворачиваем тему в Telegram, чтобы она не висела в активных.
+        # Удалять нельзя: переписка нужна для разборов.
+        try:
+            await bot.close_forum_topic(
+                chat_id=message.chat.id,
+                message_thread_id=message.message_thread_id
+            )
+        except Exception as error:
+            if not is_thread_missing(error):
+                logger.error(f"Failed to close forum topic {message.message_thread_id}: {error}")
+
+            await bot.send_message(
+                message.chat.id,
+                "✅ Обращение закрыто.",
+                message_thread_id=message.message_thread_id
+            )
+
     async def handle_admin_message(self, message: Message, bot: AsyncTeleBot):
         if not message.message_thread_id:
             return
@@ -93,6 +165,16 @@ class AdminService:
             if not topic:
                 return
 
+            if topic.status == TopicStatus.CLOSED:
+                # Раньше такой ответ всё равно уходил пользователю — уже после того,
+                # как тому сообщили о закрытии, и при этом его ответ попадал уже в новую тему.
+                await bot.send_message(
+                    message.chat.id,
+                    "⚠️ Обращение закрыто, сообщение не отправлено. Ждите нового обращения от пользователя.",
+                    message_thread_id=message.message_thread_id
+                )
+                return
+
             if topic.status == TopicStatus.SPEC:
                 admin = await self.get_admin(message.from_user.id)
 
@@ -109,7 +191,32 @@ class AdminService:
                 )
             except Exception as e:
                 logger.error(f"Failed to deliver reply to user {topic.user_id}: {e}")
+
+                if is_user_unreachable(e):
+                    await bot.send_message(
+                        message.chat.id,
+                        "⚠️ Пользователь заблокировал бота — сообщение не доставлено.",
+                        message_thread_id=message.message_thread_id
+                    )
+
                 return
+
+            # Отмечаем, кто взял обращение. Колонка claimed_by была в модели,
+            # но никто её не заполнял, и статус CLAIMED никогда не выставлялся.
+            if topic.claimed_by is None:
+                topic.claimed_by = message.from_user.id
+
+                if topic.status == TopicStatus.OPEN:
+                    topic.status = TopicStatus.CLAIMED
+
+                session.add(AdminLog(
+                    admin_user_id=message.from_user.id,
+                    action_type=ActionType.TOPIC_CLAIMED,
+                    topic_id=topic.id,
+                    details=f"User {topic.user_id}"
+                ))
+
+                await session.commit()
 
         moderation_service = ModerationService()
         await moderation_service.increment_admin_messages(message.from_user.id)
