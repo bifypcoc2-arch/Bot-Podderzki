@@ -1,9 +1,14 @@
+import logging
+
 from telebot.async_telebot import AsyncTeleBot
 from telebot.types import Message
 from sqlalchemy import select
 
 from database.models import Admin, Topic, TopicStatus, AdminLog, ActionType
 from database.database import async_session_maker
+
+
+logger = logging.getLogger(__name__)
 
 
 class AdminService:
@@ -71,6 +76,13 @@ class AdminService:
         if message.forward_from or message.forward_from_chat:
             return
 
+        # Этот хендлер регистрируется раньше хендлеров /ad, /ads и /pet,
+        # а telebot отдаёт сообщение первому подходящему. Без этой проверки
+        # команда, набранная внутри темы, ушла бы пользователю как обычный ответ.
+        text = message.text or message.caption or ""
+        if text.startswith("/"):
+            return
+
         async with async_session_maker() as session:
             result = await session.execute(
                 select(Topic).where(Topic.topic_id == message.message_thread_id)
@@ -95,4 +107,4 @@ class AdminService:
                     message_id=message.message_id
                 )
             except Exception as e:
-                pass
+                logger.error(f"Failed to deliver reply to user {topic.user_id}: {e}")
