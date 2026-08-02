@@ -1,7 +1,9 @@
+import logging
+
 from aiohttp import web
 from sqlalchemy import select
 
-from database.models import UserPet, Stats, Inventory, ShopItem
+from database.models import Stats, Inventory, ShopItem
 from database.database import async_session_maker
 from services.pet_service import PetService
 from services.shop_service import ShopService
@@ -9,7 +11,35 @@ from services.game_service import GameService
 from services.achievement_service import AchievementService
 
 
+logger = logging.getLogger(__name__)
+
+
+def _bad_request(message: str) -> web.Response:
+    return web.json_response({'success': False, 'message': message}, status=400)
+
+
+async def _json_body(request: web.Request) -> dict | None:
+    """Битое тело запроса раньше роняло обработчик в 500."""
+    try:
+        data = await request.json()
+    except Exception:
+        return None
+
+    return data if isinstance(data, dict) else None
+
+
+def _int_field(data: dict, name: str) -> int | None:
+    try:
+        return int(data[name])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 class MiniAppAPI:
+    """user_id всегда берётся из request["user_id"], куда его кладёт
+    telegram_auth_middleware после проверки подписи. Значения user_id
+    из тела или query-строки игнорируются: им нельзя доверять."""
+
     def __init__(self):
         self.pet_service = PetService()
         self.shop_service = ShopService()
@@ -17,7 +47,7 @@ class MiniAppAPI:
         self.achievement_service = AchievementService()
 
     async def get_pet_state(self, request: web.Request) -> web.Response:
-        user_id = int(request.query.get('user_id'))
+        user_id = request['user_id']
 
         pet = await self.pet_service.update_parameters(user_id)
 
@@ -37,9 +67,13 @@ class MiniAppAPI:
         })
 
     async def perform_action(self, request: web.Request) -> web.Response:
-        data = await request.json()
-        user_id = int(data['user_id'])
-        action = data['action']
+        user_id = request['user_id']
+
+        data = await _json_body(request)
+        if data is None:
+            return _bad_request('Некорректный запрос')
+
+        action = data.get('action')
 
         if action == 'feed':
             result = await self.pet_service.feed_pet(user_id)
@@ -52,18 +86,18 @@ class MiniAppAPI:
         elif action == 'train':
             result = await self.pet_service.train_pet(user_id)
         else:
-            return web.json_response({'success': False, 'message': 'Unknown action'}, status=400)
+            return _bad_request('Неизвестное действие')
 
         return web.json_response(result)
 
     async def get_stats(self, request: web.Request) -> web.Response:
-        user_id = int(request.query.get('user_id'))
+        user_id = request['user_id']
 
         async with async_session_maker() as session:
             result = await session.execute(
                 select(Stats).where(Stats.user_id == user_id)
             )
-            stats = result.scalar_one_or_none()
+            stats = result.scalars().first()
 
             if not stats:
                 return web.json_response({
@@ -93,7 +127,7 @@ class MiniAppAPI:
             })
 
     async def get_inventory(self, request: web.Request) -> web.Response:
-        user_id = int(request.query.get('user_id'))
+        user_id = request['user_id']
 
         async with async_session_maker() as session:
             result = await session.execute(
@@ -136,61 +170,97 @@ class MiniAppAPI:
             return web.json_response({'items': shop_data})
 
     async def buy_item(self, request: web.Request) -> web.Response:
-        data = await request.json()
-        user_id = int(data['user_id'])
-        item_id = int(data['item_id'])
+        user_id = request['user_id']
+
+        data = await _json_body(request)
+        if data is None:
+            return _bad_request('Некорректный запрос')
+
+        item_id = _int_field(data, 'item_id')
+        if item_id is None:
+            return _bad_request('Не указан предмет')
 
         result = await self.shop_service.buy_item(user_id, item_id)
         return web.json_response(result)
 
     async def use_item(self, request: web.Request) -> web.Response:
-        data = await request.json()
-        user_id = int(data['user_id'])
-        inventory_id = int(data['inventory_id'])
+        user_id = request['user_id']
+
+        data = await _json_body(request)
+        if data is None:
+            return _bad_request('Некорректный запрос')
+
+        inventory_id = _int_field(data, 'inventory_id')
+        if inventory_id is None:
+            return _bad_request('Не указан предмет из инвентаря')
 
         result = await self.shop_service.use_item(user_id, inventory_id)
         return web.json_response(result)
 
     async def equip_item(self, request: web.Request) -> web.Response:
-        data = await request.json()
-        user_id = int(data['user_id'])
-        inventory_id = int(data['inventory_id'])
+        user_id = request['user_id']
+
+        data = await _json_body(request)
+        if data is None:
+            return _bad_request('Некорректный запрос')
+
+        inventory_id = _int_field(data, 'inventory_id')
+        if inventory_id is None:
+            return _bad_request('Не указан предмет из инвентаря')
 
         result = await self.shop_service.equip_item(user_id, inventory_id)
         return web.json_response(result)
 
     async def play_phantom_cube(self, request: web.Request) -> web.Response:
-        data = await request.json()
-        user_id = int(data['user_id'])
-        guess = int(data['guess'])
+        user_id = request['user_id']
+
+        data = await _json_body(request)
+        if data is None:
+            return _bad_request('Некорректный запрос')
+
+        guess = _int_field(data, 'guess')
+        if guess is None:
+            return _bad_request('Нужно число')
 
         result = await self.game_service.play_phantom_cube(user_id, guess)
         return web.json_response(result)
 
     async def play_number_whisper(self, request: web.Request) -> web.Response:
-        data = await request.json()
-        user_id = int(data['user_id'])
-        guess = int(data['guess'])
+        user_id = request['user_id']
+
+        data = await _json_body(request)
+        if data is None:
+            return _bad_request('Некорректный запрос')
+
+        guess = _int_field(data, 'guess')
+        if guess is None:
+            return _bad_request('Нужно число')
 
         result = await self.game_service.play_number_whisper(user_id, guess)
         return web.json_response(result)
 
     async def play_cursed_riddle(self, request: web.Request) -> web.Response:
-        data = await request.json()
-        user_id = int(data['user_id'])
-        answer = data['answer']
+        user_id = request['user_id']
+
+        data = await _json_body(request)
+        if data is None:
+            return _bad_request('Некорректный запрос')
+
+        answer = data.get('answer')
+        if not isinstance(answer, str) or not answer.strip():
+            return _bad_request('Нужен ответ')
 
         result = await self.game_service.play_cursed_riddle(user_id, answer)
         return web.json_response(result)
 
     async def check_achievements(self, request: web.Request) -> web.Response:
-        user_id = int(request.query.get('user_id'))
+        user_id = request['user_id']
 
         newly_unlocked = await self.achievement_service.check_and_award_achievements(user_id)
         return web.json_response({'newly_unlocked': newly_unlocked})
 
     async def get_achievements(self, request: web.Request) -> web.Response:
-        user_id = int(request.query.get('user_id'))
+        user_id = request['user_id']
 
         achievements = await self.achievement_service.get_user_achievements(user_id)
         return web.json_response({'achievements': achievements})

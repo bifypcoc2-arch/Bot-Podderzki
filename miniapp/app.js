@@ -1,21 +1,43 @@
 const tg = window.Telegram.WebApp;
-let userId = null;
 let currentPage = 'pet';
+
+// Подписанные данные Telegram. Сервер сам достаёт из них user_id,
+// поэтому передавать ID вручную больше не нужно и нельзя.
+const initData = tg.initData || '';
+
+async function apiFetch(url, options = {}) {
+    const headers = Object.assign(
+        { 'X-Telegram-Init-Data': initData },
+        options.headers || {}
+    );
+
+    const response = await fetch(url, Object.assign({}, options, { headers }));
+
+    if (response.status === 401) {
+        throw new Error('unauthorized');
+    }
+
+    return response;
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     tg.ready();
     tg.expand();
 
-    userId = tg.initDataUnsafe?.user?.id;
-
-    if (!userId) {
-        console.error('User ID not found');
-        document.getElementById('loading').textContent = 'Ошибка: не удалось получить данные пользователя';
+    if (!initData) {
+        document.getElementById('loading').textContent =
+            'Откройте приложение через Telegram';
         return;
     }
 
-    await loadPetState();
-    await loadStats();
+    try {
+        await loadPetState();
+        await loadStats();
+    } catch (error) {
+        document.getElementById('loading').textContent =
+            'Ошибка авторизации. Откройте приложение заново из чата с ботом';
+        return;
+    }
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'block';
@@ -52,15 +74,10 @@ function switchPage(page) {
 }
 
 async function loadPetState() {
-    try {
-        const response = await fetch(`/api/pet?user_id=${userId}`);
-        const data = await response.json();
+    const response = await apiFetch('/api/pet');
+    const data = await response.json();
 
-        updatePetDisplay(data);
-    } catch (error) {
-        console.error('Error loading pet state:', error);
-        tg.showAlert('Ошибка загрузки данных питомца');
-    }
+    updatePetDisplay(data);
 }
 
 function updatePetDisplay(pet) {
@@ -126,10 +143,10 @@ function translatePetType(type) {
 
 async function performAction(action) {
     try {
-        const response = await fetch('/api/action', {
+        const response = await apiFetch('/api/action', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, action })
+            body: JSON.stringify({ action })
         });
 
         const result = await response.json();
@@ -142,32 +159,33 @@ async function performAction(action) {
         }
     } catch (error) {
         console.error('Error performing action:', error);
-        tg.showAlert('Ошибка выполнения действия');
+
+        if (error.message === 'unauthorized') {
+            tg.showAlert('Сессия устарела. Откройте приложение заново из чата с ботом');
+        } else {
+            tg.showAlert('Ошибка выполнения действия');
+        }
     }
 }
 
 async function loadStats() {
-    try {
-        const response = await fetch(`/api/stats?user_id=${userId}`);
-        const stats = await response.json();
+    const response = await apiFetch('/api/stats');
+    const stats = await response.json();
 
-        document.getElementById('stat-messages').textContent = stats.messages_sent;
-        document.getElementById('stat-games').textContent = stats.games_played;
-        document.getElementById('stat-wins').textContent = stats.games_won;
-        document.getElementById('stat-streak').textContent = stats.win_streak;
-        document.getElementById('stat-feedings').textContent = stats.feedings;
-        document.getElementById('stat-baths').textContent = stats.baths;
-        document.getElementById('stat-sleeps').textContent = stats.sleeps;
-        document.getElementById('stat-trainings').textContent = stats.trainings;
-        document.getElementById('currency').textContent = stats.currency;
-    } catch (error) {
-        console.error('Error loading stats:', error);
-    }
+    document.getElementById('stat-messages').textContent = stats.messages_sent;
+    document.getElementById('stat-games').textContent = stats.games_played;
+    document.getElementById('stat-wins').textContent = stats.games_won;
+    document.getElementById('stat-streak').textContent = stats.win_streak;
+    document.getElementById('stat-feedings').textContent = stats.feedings;
+    document.getElementById('stat-baths').textContent = stats.baths;
+    document.getElementById('stat-sleeps').textContent = stats.sleeps;
+    document.getElementById('stat-trainings').textContent = stats.trainings;
+    document.getElementById('currency').textContent = stats.currency;
 }
 
 async function loadShop() {
     try {
-        const response = await fetch('/api/shop');
+        const response = await apiFetch('/api/shop');
         const data = await response.json();
 
         const shopContainer = document.getElementById('shop-items');
@@ -190,14 +208,40 @@ async function loadShop() {
 
 async function buyItem(itemId) {
     tg.showConfirm('Купить этот предмет?', async (confirmed) => {
-        if (confirmed) {
-            tg.showAlert('Функция покупки будет реализована');
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const response = await apiFetch('/api/shop/buy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ item_id: itemId })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                tg.showAlert('✅ Покупка совершена!');
+                await loadStats();
+            } else {
+                tg.showAlert('❌ ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error buying item:', error);
+            tg.showAlert('Ошибка покупки');
         }
     });
 }
 
 async function updatePetState() {
-    if (currentPage === 'pet') {
+    if (currentPage !== 'pet') {
+        return;
+    }
+
+    try {
         await loadPetState();
+    } catch (error) {
+        console.error('Error updating pet state:', error);
     }
 }
