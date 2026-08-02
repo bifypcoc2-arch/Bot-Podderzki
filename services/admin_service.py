@@ -6,6 +6,7 @@ from sqlalchemy import select
 
 from database.models import Admin, Topic, TopicStatus, AdminLog, ActionType
 from database.database import async_session_maker
+from services.moderation_service import ModerationService
 
 
 logger = logging.getLogger(__name__)
@@ -108,3 +109,7 @@ class AdminService:
                 )
             except Exception as e:
                 logger.error(f"Failed to deliver reply to user {topic.user_id}: {e}")
+                return
+
+        moderation_service = ModerationService()
+        await moderation_service.increment_admin_messages(message.from_user.id)

@@ -1,32 +1,39 @@
-import hashlib
+import logging
 
 from telebot.async_telebot import AsyncTeleBot
 from telebot.types import Message
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import User, Topic, TopicStatus
+from database.models import User, Topic, TopicStatus, Stats
 from database.database import async_session_maker
+from services.anonymity import anonymous_code
+from services.moderation_service import ModerationService
 from config import settings
 
 
-def anonymous_code(user_id: int) -> str:
-    """Стабильный анонимный код обращения.
+logger = logging.getLogger(__name__)
 
-    Один и тот же пользователь всегда получает один и тот же код,
-    но по коду нельзя восстановить Telegram ID.
-    """
-    digest = hashlib.sha256(f"support:{user_id}".encode("utf-8")).hexdigest()
-    return digest[:6].upper()
+__all__ = ["SupportService", "anonymous_code"]
 
 
 class SupportService:
-    async def forward_to_support(self, message: Message, bot: AsyncTeleBot):
+    async def forward_to_support(self, message: Message, bot: AsyncTeleBot) -> bool:
+        """Передаёт сообщение в тему поддержки.
+
+        Возвращает False, если пользователь заблокирован — тогда ни тема,
+        ни сообщение в форум не попадают.
+        """
+        moderation_service = ModerationService()
+        if await moderation_service.is_banned(message.from_user.id):
+            return False
+
         async with async_session_maker() as session:
             user = await self._get_or_create_user(session, message.from_user)
             await session.commit()
 
             topic_id = await self._get_or_create_topic(session, user.user_id, bot)
+            await self._increment_message_count(session, user.user_id)
 
         # copy_message, а не forward_message: копия не содержит ссылки на автора,
         # поэтому в топике личность пользователя не раскрывается.
@@ -36,6 +43,8 @@ class SupportService:
             message_id=message.message_id,
             message_thread_id=topic_id
         )
+
+        return True
 
     async def _get_or_create_user(self, session: AsyncSession, from_user) -> User:
         result = await session.execute(
@@ -83,3 +92,17 @@ class SupportService:
         await session.commit()
 
         return topic.topic_id
+
+    async def _increment_message_count(self, session: AsyncSession, user_id: int):
+        """Счётчик обращений пользователя для /stats."""
+        result = await session.execute(
+            select(Stats).where(Stats.user_id == user_id)
+        )
+        stats = result.scalars().first()
+
+        if not stats:
+            stats = Stats(user_id=user_id, messages_sent=0)
+            session.add(stats)
+
+        stats.messages_sent = (stats.messages_sent or 0) + 1
+        await session.commit()

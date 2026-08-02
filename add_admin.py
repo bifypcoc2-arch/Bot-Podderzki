@@ -21,7 +21,8 @@ async def add_admin(user_id: int, role: str, role_level: int):
 async def main():
     if len(sys.argv) < 4:
         print("Использование: python add_admin.py <user_id> <role> <role_level>")
-        print("Роли: ADMIN=1, SPEC_ADMIN=2, SENIOR_ADMIN=3, TECH_ADMIN=4, OWNER=5")
+        print("Роли: ADMIN=1, SPEC_ADMIN=2, SENIOR_ADMIN=3, TECH_ADMIN=4, CO_OWNER=5, OWNER=5")
+        print("Баны и статистика (/ban, /unban, /bans, /stats) доступны с уровня 5.")
         print("Пример: python add_admin.py 123456789 OWNER 5")
         return
 
