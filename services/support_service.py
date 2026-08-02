@@ -1,3 +1,5 @@
+import hashlib
+
 from telebot.async_telebot import AsyncTeleBot
 from telebot.types import Message
 from sqlalchemy import select
@@ -8,22 +10,32 @@ from database.database import async_session_maker
 from config import settings
 
 
+def anonymous_code(user_id: int) -> str:
+    """Стабильный анонимный код обращения.
+
+    Один и тот же пользователь всегда получает один и тот же код,
+    но по коду нельзя восстановить Telegram ID.
+    """
+    digest = hashlib.sha256(f"support:{user_id}".encode("utf-8")).hexdigest()
+    return digest[:6].upper()
+
+
 class SupportService:
     async def forward_to_support(self, message: Message, bot: AsyncTeleBot):
         async with async_session_maker() as session:
             user = await self._get_or_create_user(session, message.from_user)
-
-            user_display_name = message.from_user.first_name or message.from_user.username or f"User {user.user_id}"
-            topic = await self._get_or_create_topic(session, user.user_id, bot, user_display_name)
-
-            await bot.forward_message(
-                chat_id=settings.forum_group_id,
-                from_chat_id=message.chat.id,
-                message_id=message.message_id,
-                message_thread_id=topic.topic_id
-            )
-
             await session.commit()
+
+            topic_id = await self._get_or_create_topic(session, user.user_id, bot)
+
+        # copy_message, а не forward_message: копия не содержит ссылки на автора,
+        # поэтому в топике личность пользователя не раскрывается.
+        await bot.copy_message(
+            chat_id=settings.forum_group_id,
+            from_chat_id=message.chat.id,
+            message_id=message.message_id,
+            message_thread_id=topic_id
+        )
 
     async def _get_or_create_user(self, session: AsyncSession, from_user) -> User:
         result = await session.execute(
@@ -41,27 +53,33 @@ class SupportService:
 
         return user
 
-    async def _get_or_create_topic(self, session: AsyncSession, user_id: int, bot: AsyncTeleBot, user_name: str) -> Topic:
+    async def _get_or_create_topic(self, session: AsyncSession, user_id: int, bot: AsyncTeleBot) -> int:
         result = await session.execute(
             select(Topic).where(
                 Topic.user_id == user_id,
                 Topic.status != TopicStatus.CLOSED
             )
         )
-        topic = result.scalar_one_or_none()
+        topic = result.scalars().first()
 
-        if not topic:
-            topic_name = f"Обращение от {user_name}"
-            created_topic = await bot.create_forum_topic(
-                chat_id=settings.forum_group_id,
-                name=topic_name
-            )
+        if topic:
+            return topic.topic_id
 
-            topic = Topic(
-                user_id=user_id,
-                topic_id=created_topic.message_thread_id,
-                status=TopicStatus.OPEN
-            )
-            session.add(topic)
+        # В названии темы только анонимный код — ни имени, ни username, ни ID.
+        topic_name = f"Обращение #{anonymous_code(user_id)}"
+        created_topic = await bot.create_forum_topic(
+            chat_id=settings.forum_group_id,
+            name=topic_name
+        )
 
-        return topic
+        topic = Topic(
+            user_id=user_id,
+            topic_id=created_topic.message_thread_id,
+            status=TopicStatus.OPEN
+        )
+        session.add(topic)
+        # Коммитим сразу: иначе при ошибке отправки тема останется в Telegram,
+        # но не в БД, и на следующем сообщении создастся дубль.
+        await session.commit()
+
+        return topic.topic_id
