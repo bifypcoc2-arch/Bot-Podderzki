@@ -18,14 +18,17 @@ __all__ = ["SupportService", "anonymous_code"]
 
 
 class SupportService:
+    async def is_user_banned(self, user_id: int) -> bool:
+        moderation_service = ModerationService()
+        return await moderation_service.is_banned(user_id)
+
     async def forward_to_support(self, message: Message, bot: AsyncTeleBot) -> bool:
         """Передаёт сообщение в тему поддержки.
 
         Возвращает False, если пользователь заблокирован — тогда ни тема,
         ни сообщение в форум не попадают.
         """
-        moderation_service = ModerationService()
-        if await moderation_service.is_banned(message.from_user.id):
+        if await self.is_user_banned(message.from_user.id):
             return False
 
         async with async_session_maker() as session:
