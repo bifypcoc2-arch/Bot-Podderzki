@@ -4,6 +4,7 @@ from telebot.types import Message
 from config import settings
 from database.models import OWNER_LEVEL
 from services.admin_service import AdminService
+from services.chat_moderation_service import ChatModerationService
 from services.moderation_service import ModerationService
 from filters.role_filter import role_filter
 
@@ -82,5 +83,10 @@ def register_handlers(bot: AsyncTeleBot):
         content_types=['text', 'photo', 'video', 'document']
     )
     async def handle_admin_reply(message: Message):
+        # Считаем актив здесь, а не в middleware: этот обработчик и так видит
+        # все сообщения группы — и в темах обращений, и в общем чате.
+        chat_moderation = ChatModerationService()
+        await chat_moderation.record_message(message)
+
         admin_service = AdminService()
         await admin_service.handle_admin_message(message, bot)
