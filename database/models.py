@@ -30,6 +30,7 @@ class TopicStatus(enum.Enum):
 
 class BroadcastStatus(enum.Enum):
     DRAFT = "draft"
+    SENDING = "sending"
     SENT = "sent"
     DELETED = "deleted"
 
