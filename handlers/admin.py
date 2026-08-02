@@ -2,15 +2,20 @@ from telebot.async_telebot import AsyncTeleBot
 from telebot.types import Message
 
 from config import settings
+from database.models import OWNER_LEVEL
 from services.admin_service import AdminService
+from services.moderation_service import ModerationService
 from filters.role_filter import role_filter
+
+
+NO_ACCESS = "⛔ Недостаточно прав для выполнения команды."
 
 
 def register_handlers(bot: AsyncTeleBot):
     @bot.message_handler(commands=['spec'])
     async def cmd_spec(message: Message):
         if not await role_filter(message, min_level=3):
-            await bot.reply_to(message, "⛔ Недостаточно прав для выполнения команды.")
+            await bot.reply_to(message, NO_ACCESS)
             return
 
         admin_service = AdminService()
@@ -19,11 +24,47 @@ def register_handlers(bot: AsyncTeleBot):
     @bot.message_handler(commands=['unspec'])
     async def cmd_unspec(message: Message):
         if not await role_filter(message, min_level=3):
-            await bot.reply_to(message, "⛔ Недостаточно прав для выполнения команды.")
+            await bot.reply_to(message, NO_ACCESS)
             return
 
         admin_service = AdminService()
         await admin_service.unset_topic_spec(message, bot)
+
+    @bot.message_handler(commands=['ban'])
+    async def cmd_ban(message: Message):
+        if not await role_filter(message, min_level=OWNER_LEVEL):
+            await bot.reply_to(message, NO_ACCESS)
+            return
+
+        moderation_service = ModerationService()
+        await moderation_service.handle_ban_command(message, bot)
+
+    @bot.message_handler(commands=['unban'])
+    async def cmd_unban(message: Message):
+        if not await role_filter(message, min_level=OWNER_LEVEL):
+            await bot.reply_to(message, NO_ACCESS)
+            return
+
+        moderation_service = ModerationService()
+        await moderation_service.handle_unban_command(message, bot)
+
+    @bot.message_handler(commands=['bans'])
+    async def cmd_bans(message: Message):
+        if not await role_filter(message, min_level=OWNER_LEVEL):
+            await bot.reply_to(message, NO_ACCESS)
+            return
+
+        moderation_service = ModerationService()
+        await moderation_service.send_ban_list(message, bot)
+
+    @bot.message_handler(commands=['stats'])
+    async def cmd_stats(message: Message):
+        if not await role_filter(message, min_level=OWNER_LEVEL):
+            await bot.reply_to(message, NO_ACCESS)
+            return
+
+        moderation_service = ModerationService()
+        await moderation_service.send_message_stats(message, bot)
 
     @bot.message_handler(
         func=lambda m: m.chat.id == settings.forum_group_id,
