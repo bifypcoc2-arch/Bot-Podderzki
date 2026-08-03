@@ -5,6 +5,9 @@ let currentPage = 'pet';
 // поэтому передавать ID вручную больше не нужно и нельзя.
 const initData = tg.initData || '';
 
+const RING_PARAMS = ['hunger', 'happiness', 'hygiene', 'energy'];
+const BAR_PARAMS = ['discipline', 'strength'];
+
 async function apiFetch(url, options = {}) {
     const headers = Object.assign(
         { 'X-Telegram-Init-Data': initData },
@@ -24,9 +27,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     tg.ready();
     tg.expand();
 
+    if (typeof tg.setHeaderColor === 'function') {
+        tg.setHeaderColor('#0d0f1a');
+    }
+
     if (!initData) {
-        document.getElementById('loading').textContent =
-            'Откройте приложение через Telegram';
+        showLoadingMessage('Откройте приложение через Telegram');
         return;
     }
 
@@ -34,26 +40,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadPetState();
         await loadStats();
     } catch (error) {
-        document.getElementById('loading').textContent =
-            'Ошибка авторизации. Откройте приложение заново из чата с ботом';
+        showLoadingMessage('Ошибка авторизации. Откройте приложение заново из чата с ботом');
         return;
     }
 
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('content').style.display = 'block';
+    document.getElementById('loading').hidden = true;
+    document.getElementById('content').hidden = false;
 
     setupNavigation();
+    setupActions();
     setInterval(updatePetState, 60000);
 });
 
-function setupNavigation() {
-    const navButtons = document.querySelectorAll('.nav-btn');
+function showLoadingMessage(text) {
+    const loading = document.getElementById('loading');
+    loading.innerHTML = '';
 
-    navButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const page = btn.dataset.page;
-            switchPage(page);
-        });
+    const paragraph = document.createElement('p');
+    paragraph.textContent = text;
+    loading.appendChild(paragraph);
+}
+
+function setupNavigation() {
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchPage(btn.dataset.page));
+    });
+}
+
+function setupActions() {
+    document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.addEventListener('click', () => performAction(btn.dataset.action));
     });
 }
 
@@ -64,13 +80,21 @@ function switchPage(page) {
     document.getElementById(`${page}-page`).classList.add('active');
     document.querySelector(`[data-page="${page}"]`).classList.add('active');
 
+    window.scrollTo(0, 0);
     currentPage = page;
 
     if (page === 'profile') {
-        loadStats();
+        loadStats().catch(logError);
+        loadAchievements().catch(logError);
     } else if (page === 'shop') {
-        loadShop();
+        loadShop().catch(logError);
+    } else if (page === 'home') {
+        loadInventory().catch(logError);
     }
+}
+
+function logError(error) {
+    console.error(error);
 }
 
 async function loadPetState() {
@@ -81,23 +105,69 @@ async function loadPetState() {
 }
 
 function updatePetDisplay(pet) {
-    document.getElementById('pet-stage').textContent = translateStage(pet.stage);
-    document.getElementById('pet-type').textContent = pet.pet_type ? translatePetType(pet.pet_type) : 'Неизвестно';
-    document.getElementById('pet-xp').textContent = pet.xp;
+    const stage = translateStage(pet.stage);
+    const type = pet.pet_type ? translatePetType(pet.pet_type) : null;
 
+    // До стадии «Малыш» вид ещё не выбран, поэтому заголовком служит стадия.
+    document.getElementById('pet-name').textContent = type || stage;
+    document.getElementById('pet-caption').textContent = type ? stage : 'ещё не проявился';
     document.getElementById('pet-avatar').textContent = getPetEmoji(pet.stage, pet.pet_type);
 
-    updateParameter('hunger', pet.hunger);
-    updateParameter('happiness', pet.happiness);
-    updateParameter('hygiene', pet.hygiene);
-    updateParameter('energy', pet.energy);
-    updateParameter('discipline', pet.discipline);
-    updateParameter('strength', pet.strength);
+    RING_PARAMS.forEach(param => updateRing(param, pet[param]));
+    BAR_PARAMS.forEach(param => updateBar(param, pet[param]));
+
+    updateExperience(pet);
 }
 
-function updateParameter(param, value) {
-    document.getElementById(param).value = value;
-    document.getElementById(`${param}-value`).textContent = value;
+function clamp(value) {
+    const number = Number(value) || 0;
+    return Math.max(0, Math.min(100, number));
+}
+
+function updateRing(param, value) {
+    const ring = document.getElementById(`ring-${param}`);
+    const percent = clamp(value);
+
+    ring.style.setProperty('--value', percent);
+    ring.classList.toggle('is-low', percent < 30);
+    document.getElementById(`${param}-value`).textContent = percent;
+}
+
+function updateBar(param, value) {
+    const percent = clamp(value);
+
+    document.getElementById(`bar-${param}`).style.width = `${percent}%`;
+    document.getElementById(`${param}-value`).textContent = percent;
+}
+
+function updateExperience(pet) {
+    const xp = Number(pet.xp) || 0;
+    const target = pet.next_stage_xp;
+    const fill = document.getElementById('xp-fill');
+    const title = document.getElementById('xp-title');
+    const numbers = document.getElementById('xp-numbers');
+    const note = document.getElementById('growth-note');
+
+    if (target) {
+        const percent = Math.max(0, Math.min(100, Math.round((xp / target) * 100)));
+        title.textContent = 'Опыт до следующей стадии';
+        numbers.textContent = `${xp} / ${target} XP`;
+        fill.style.width = `${percent}%`;
+    } else {
+        title.textContent = 'Максимальная стадия';
+        numbers.textContent = `${xp} XP`;
+        fill.style.width = '100%';
+    }
+
+    // Опыта мало: стадия не растёт, пока все параметры не выше порога.
+    if (!target) {
+        note.textContent = '';
+    } else if (pet.growth_ready) {
+        note.textContent = 'Уход в порядке — питомец растёт.';
+    } else {
+        const minimum = pet.growth_param_minimum || 60;
+        note.textContent = `Для роста все параметры должны быть не ниже ${minimum}.`;
+    }
 }
 
 function getPetEmoji(stage, type) {
@@ -152,10 +222,12 @@ async function performAction(action) {
         const result = await response.json();
 
         if (result.success) {
-            tg.showAlert('✅ Действие выполнено!');
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
             await loadPetState();
         } else {
-            tg.showAlert('❌ ' + result.message);
+            tg.showAlert(result.message || 'Действие недоступно');
         }
     } catch (error) {
         console.error('Error performing action:', error);
@@ -172,42 +244,140 @@ async function loadStats() {
     const response = await apiFetch('/api/stats');
     const stats = await response.json();
 
-    document.getElementById('stat-messages').textContent = stats.messages_sent;
-    document.getElementById('stat-games').textContent = stats.games_played;
-    document.getElementById('stat-wins').textContent = stats.games_won;
-    document.getElementById('stat-streak').textContent = stats.win_streak;
-    document.getElementById('stat-feedings').textContent = stats.feedings;
-    document.getElementById('stat-baths').textContent = stats.baths;
-    document.getElementById('stat-sleeps').textContent = stats.sleeps;
-    document.getElementById('stat-trainings').textContent = stats.trainings;
-    document.getElementById('currency').textContent = stats.currency;
+    const fields = {
+        'currency': stats.currency,
+        'login-streak': stats.login_streak,
+        'stat-messages': stats.messages_sent,
+        'stat-login-streak': stats.login_streak,
+        'stat-games': stats.games_played,
+        'stat-wins': stats.games_won,
+        'stat-streak': stats.win_streak,
+        'stat-feedings': stats.feedings,
+        'stat-baths': stats.baths,
+        'stat-sleeps': stats.sleeps,
+        'stat-trainings': stats.trainings
+    };
+
+    Object.keys(fields).forEach(id => {
+        document.getElementById(id).textContent = fields[id] ?? 0;
+    });
+}
+
+function describeItem(item) {
+    const parts = [];
+
+    if (item.type) {
+        parts.push(translateItemType(item.type));
+    }
+
+    if (item.effect_type && item.effect_value) {
+        parts.push(`+${item.effect_value} к характеристике «${item.effect_type}»`);
+    }
+
+    return parts.join(' · ');
+}
+
+function translateItemType(type) {
+    const types = {
+        food: 'Еда',
+        toy: 'Игрушка',
+        accessory: 'Аксессуар',
+        background: 'Фон',
+        decoration: 'Декор'
+    };
+    return types[type] || type;
 }
 
 async function loadShop() {
-    try {
-        const response = await apiFetch('/api/shop');
-        const data = await response.json();
+    const response = await apiFetch('/api/shop');
+    const data = await response.json();
 
-        const shopContainer = document.getElementById('shop-items');
-        shopContainer.innerHTML = '';
+    const container = document.getElementById('shop-items');
+    container.innerHTML = '';
 
-        data.items.forEach(item => {
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'shop-item';
-            itemDiv.innerHTML = `
-                <h3>${item.name}</h3>
-                <p>Цена: ${item.price} монет</p>
-                <button onclick="buyItem(${item.id})">Купить</button>
-            `;
-            shopContainer.appendChild(itemDiv);
-        });
-    } catch (error) {
-        console.error('Error loading shop:', error);
-    }
+    document.getElementById('shop-empty').hidden = data.items.length > 0;
+
+    data.items.forEach(item => {
+        const card = document.createElement('article');
+        card.className = 'shop-card';
+
+        const name = document.createElement('h3');
+        name.textContent = item.name;
+
+        const description = document.createElement('p');
+        description.textContent = describeItem(item);
+
+        const price = document.createElement('button');
+        price.className = 'price-btn';
+        price.textContent = `◆ ${item.price}`;
+        price.addEventListener('click', () => buyItem(item.id, item.name));
+
+        card.append(name, description, price);
+        container.appendChild(card);
+    });
 }
 
-async function buyItem(itemId) {
-    tg.showConfirm('Купить этот предмет?', async (confirmed) => {
+async function loadInventory() {
+    const response = await apiFetch('/api/inventory');
+    const data = await response.json();
+
+    const container = document.getElementById('home-items');
+    container.innerHTML = '';
+
+    document.getElementById('home-empty').hidden = data.items.length > 0;
+
+    data.items.forEach(item => {
+        const card = document.createElement('article');
+        card.className = 'shop-card';
+
+        const name = document.createElement('h3');
+        name.textContent = item.name;
+
+        const description = document.createElement('p');
+        const details = [translateItemType(item.type)];
+        if (item.quantity > 1) {
+            details.push(`${item.quantity} шт.`);
+        }
+        if (item.is_equipped) {
+            details.push('надето');
+        }
+        description.textContent = details.join(' · ');
+
+        card.append(name, description);
+        container.appendChild(card);
+    });
+}
+
+async function loadAchievements() {
+    const response = await apiFetch('/api/achievements');
+    const data = await response.json();
+
+    const container = document.getElementById('achievements-list');
+    container.innerHTML = '';
+
+    document.getElementById('achievements-empty').hidden = data.achievements.length > 0;
+
+    data.achievements.forEach(achievement => {
+        const card = document.createElement('article');
+        card.className = 'card';
+
+        const body = document.createElement('div');
+        body.className = 'card-body';
+
+        const name = document.createElement('h3');
+        name.textContent = achievement.name;
+
+        const description = document.createElement('p');
+        description.textContent = achievement.description || '';
+
+        body.append(name, description);
+        card.appendChild(body);
+        container.appendChild(card);
+    });
+}
+
+async function buyItem(itemId, itemName) {
+    tg.showConfirm(`Купить «${itemName}»?`, async (confirmed) => {
         if (!confirmed) {
             return;
         }
