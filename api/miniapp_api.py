@@ -234,18 +234,10 @@ class MiniAppAPI:
         result = await self.shop_service.equip_item(user_id, inventory_id)
         return web.json_response(result)
 
-    async def play_phantom_cube(self, request: web.Request) -> web.Response:
+    async def play_dice(self, request: web.Request) -> web.Response:
         user_id = request['user_id']
 
-        data = await _json_body(request)
-        if data is None:
-            return _bad_request('Некорректный запрос')
-
-        guess = _int_field(data, 'guess')
-        if guess is None:
-            return _bad_request('Нужно число')
-
-        result = await self.game_service.play_phantom_cube(user_id, guess)
+        result = await self.game_service.play_dice(user_id)
         return web.json_response(result)
 
     async def play_number_whisper(self, request: web.Request) -> web.Response:
@@ -262,18 +254,30 @@ class MiniAppAPI:
         result = await self.game_service.play_number_whisper(user_id, guess)
         return web.json_response(result)
 
-    async def play_cursed_riddle(self, request: web.Request) -> web.Response:
+    async def get_wordle(self, request: web.Request) -> web.Response:
+        user_id = request['user_id']
+
+        result = await self.game_service.get_wordle_state(user_id)
+        return web.json_response(result)
+
+    async def start_wordle(self, request: web.Request) -> web.Response:
+        user_id = request['user_id']
+
+        result = await self.game_service.start_wordle(user_id)
+        return web.json_response(result)
+
+    async def guess_wordle(self, request: web.Request) -> web.Response:
         user_id = request['user_id']
 
         data = await _json_body(request)
         if data is None:
             return _bad_request('Некорректный запрос')
 
-        answer = data.get('answer')
-        if not isinstance(answer, str) or not answer.strip():
-            return _bad_request('Нужен ответ')
+        guess = data.get('guess')
+        if not isinstance(guess, str) or not guess.strip():
+            return _bad_request('Нужно слово')
 
-        result = await self.game_service.play_cursed_riddle(user_id, answer)
+        result = await self.game_service.guess_wordle(user_id, guess)
         return web.json_response(result)
 
     async def check_achievements(self, request: web.Request) -> web.Response:
@@ -300,8 +304,10 @@ def setup_routes(app: web.Application):
     app.router.add_post('/api/shop/buy', api.buy_item)
     app.router.add_post('/api/shop/use', api.use_item)
     app.router.add_post('/api/shop/equip', api.equip_item)
-    app.router.add_post('/api/game/phantom-cube', api.play_phantom_cube)
+    app.router.add_post('/api/game/dice', api.play_dice)
     app.router.add_post('/api/game/number-whisper', api.play_number_whisper)
-    app.router.add_post('/api/game/cursed-riddle', api.play_cursed_riddle)
+    app.router.add_get('/api/game/wordle', api.get_wordle)
+    app.router.add_post('/api/game/wordle/start', api.start_wordle)
+    app.router.add_post('/api/game/wordle/guess', api.guess_wordle)
     app.router.add_get('/api/achievements/check', api.check_achievements)
     app.router.add_get('/api/achievements', api.get_achievements)
