@@ -100,30 +100,50 @@
 
                 <section id="games-page" class="page">
                     <h2>Мини-игры</h2>
-                    <div class="card-list">
-                        <article class="card">
-                            <div class="card-body">
-                                <h3>Призрачный куб</h3>
-                                <p>Брось кость и угадай выпавшее число</p>
+
+                    <article class="game-card">
+                        <h3>Кости духов</h3>
+                        <p class="game-rules">Твой кубик против кубика бота. У кого больше — тот и выиграл. Победа — ◆ 5</p>
+
+                        <div class="dice-row">
+                            <div class="dice-slot">
+                                <span class="dice-face" id="dice-player">•</span>
+                                <span class="dice-owner">Ты</span>
                             </div>
-                            <span class="pill">Скоро</span>
-                        </article>
-                        <article class="card">
-                            <div class="card-body">
-                                <h3>Шёпот цифр</h3>
-                                <p>Угадай задуманное число по подсказкам</p>
+                            <span class="dice-vs">против</span>
+                            <div class="dice-slot">
+                                <span class="dice-face" id="dice-bot">•</span>
+                                <span class="dice-owner">Бот</span>
                             </div>
-                            <span class="pill">Скоро</span>
-                        </article>
-                        <article class="card">
-                            <div class="card-body">
-                                <h3>Проклятая загадка</h3>
-                                <p>Загадки тумана с наградой за верный ответ</p>
-                            </div>
-                            <span class="pill">Скоро</span>
-                        </article>
-                    </div>
-                    <p class="note">Игры уже работают на сервере, осталось подключить их к экрану.</p>
+                        </div>
+
+                        <button class="primary-btn" id="dice-btn">Бросить кости</button>
+                        <p class="note" id="dice-message"></p>
+                    </article>
+
+                    <article class="game-card">
+                        <h3>Шёпот цифр</h3>
+                        <p class="game-rules">Угадай число от 1 до 10. Точно — ◆ 15, мимо на единицу — ◆ 5</p>
+
+                        <div class="number-grid" id="number-grid"></div>
+                        <p class="note" id="number-message"></p>
+                    </article>
+
+                    <article class="game-card">
+                        <h3>Слово из тумана</h3>
+                        <p class="game-rules">Шесть попыток на слово из пяти букв. Угадал — ◆ 30, нет — ничего</p>
+
+                        <div class="wordle-board" id="wordle-board"></div>
+
+                        <form class="wordle-form" id="wordle-form" hidden>
+                            <input class="wordle-input" id="wordle-input" type="text" maxlength="5"
+                                   autocomplete="off" autocorrect="off" spellcheck="false" placeholder="слово">
+                            <button class="primary-btn" type="submit">Ответить</button>
+                        </form>
+
+                        <button class="primary-btn" id="wordle-start" hidden>Загадать слово</button>
+                        <p class="note" id="wordle-message"></p>
+                    </article>
                 </section>
 
                 <section id="home-page" class="page">
