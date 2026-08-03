@@ -8,6 +8,11 @@ const initData = tg.initData || '';
 const RING_PARAMS = ['hunger', 'happiness', 'hygiene', 'energy'];
 const BAR_PARAMS = ['discipline', 'strength'];
 
+const DICE_FACES = ['•', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+const NUMBER_MAX = 10;
+const WORD_LENGTH = 5;
+const WORDLE_MAX_ATTEMPTS = 6;
+
 async function apiFetch(url, options = {}) {
     const headers = Object.assign(
         { 'X-Telegram-Init-Data': initData },
@@ -49,6 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupNavigation();
     setupActions();
+    setupGames();
     setInterval(updatePetState, 60000);
 });
 
@@ -90,6 +96,8 @@ function switchPage(page) {
         loadShop().catch(logError);
     } else if (page === 'home') {
         loadInventory().catch(logError);
+    } else if (page === 'games') {
+        loadWordle().catch(logError);
     }
 }
 
@@ -238,6 +246,348 @@ async function performAction(action) {
             tg.showAlert('Ошибка выполнения действия');
         }
     }
+}
+
+// ------------------------------------------------------------------- Игры
+
+function setupGames() {
+    document.getElementById('dice-btn').addEventListener('click', playDice);
+
+    buildNumberGrid();
+
+    document.getElementById('wordle-start').addEventListener('click', startWordle);
+    document.getElementById('wordle-form').addEventListener('submit', submitWordleGuess);
+
+    renderWordleBoard([], null);
+    loadWordle().catch(logError);
+}
+
+function haptic(type) {
+    if (tg.HapticFeedback) {
+        tg.HapticFeedback.notificationOccurred(type);
+    }
+}
+
+function gameError(error, message) {
+    console.error(error);
+
+    if (error.message === 'unauthorized') {
+        tg.showAlert('Сессия устарела. Откройте приложение заново из чата с ботом');
+        return;
+    }
+
+    tg.showAlert(message);
+}
+
+// Блокируем кнопку на время кулдауна и сами показываем оставшиеся секунды:
+// без этого игрок долбит по кнопке и получает одни отказы.
+function startCooldown(button, seconds, label) {
+    let left = Math.max(0, Number(seconds) || 0);
+
+    if (!left) {
+        button.disabled = false;
+        button.textContent = label;
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = `${label} · ${left} с`;
+
+    const timer = setInterval(() => {
+        left -= 1;
+
+        if (left <= 0) {
+            clearInterval(timer);
+            button.disabled = false;
+            button.textContent = label;
+            return;
+        }
+
+        button.textContent = `${label} · ${left} с`;
+    }, 1000);
+}
+
+async function playDice() {
+    const button = document.getElementById('dice-btn');
+    const message = document.getElementById('dice-message');
+    const playerFace = document.getElementById('dice-player');
+    const botFace = document.getElementById('dice-bot');
+
+    button.disabled = true;
+    playerFace.classList.add('is-rolling');
+    botFace.classList.add('is-rolling');
+
+    try {
+        const response = await apiFetch('/api/game/dice', { method: 'POST' });
+        const result = await response.json();
+
+        playerFace.classList.remove('is-rolling');
+        botFace.classList.remove('is-rolling');
+
+        if (!result.success) {
+            message.textContent = result.message || 'Игра недоступна';
+            startCooldown(button, result.cooldown_left, 'Бросить кости');
+            return;
+        }
+
+        playerFace.textContent = DICE_FACES[result.player_roll] || result.player_roll;
+        botFace.textContent = DICE_FACES[result.bot_roll] || result.bot_roll;
+
+        const parts = [];
+
+        if (result.won) {
+            parts.push(`Победа! ◆ +${result.reward}`);
+            haptic('success');
+        } else if (result.draw) {
+            parts.push('Ничья — серия побед сохранена');
+        } else {
+            parts.push('Бот выбросил больше');
+            haptic('warning');
+        }
+
+        if (result.rerolled) {
+            parts.push('питомец выпросил переброс');
+        }
+
+        message.textContent = parts.join(' · ');
+
+        updateCurrency(result.currency);
+        startCooldown(button, result.cooldown, 'Бросить кости');
+    } catch (error) {
+        playerFace.classList.remove('is-rolling');
+        botFace.classList.remove('is-rolling');
+        button.disabled = false;
+        gameError(error, 'Не удалось бросить кости');
+    }
+}
+
+function buildNumberGrid() {
+    const grid = document.getElementById('number-grid');
+    grid.innerHTML = '';
+
+    for (let number = 1; number <= NUMBER_MAX; number += 1) {
+        const button = document.createElement('button');
+        button.className = 'number-btn';
+        button.type = 'button';
+        button.textContent = number;
+        button.addEventListener('click', () => guessNumber(number));
+
+        grid.appendChild(button);
+    }
+}
+
+function setNumberButtonsDisabled(disabled) {
+    document.querySelectorAll('.number-btn').forEach(button => {
+        button.disabled = disabled;
+    });
+}
+
+async function guessNumber(guess) {
+    const message = document.getElementById('number-message');
+
+    setNumberButtonsDisabled(true);
+
+    try {
+        const response = await apiFetch('/api/game/number-whisper', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ guess })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            message.textContent = result.message || 'Игра недоступна';
+            unlockNumbersAfter(result.cooldown_left);
+            return;
+        }
+
+        if (result.won) {
+            message.textContent = `Точно! Загадано было ${result.secret_number}. ◆ +${result.reward}`;
+            haptic('success');
+        } else if (result.reward) {
+            message.textContent = `Почти! Загадано было ${result.secret_number}. ◆ +${result.reward}`;
+        } else {
+            message.textContent = `Мимо. Загадано было ${result.secret_number}`;
+            haptic('warning');
+        }
+
+        updateCurrency(result.currency);
+        unlockNumbersAfter(result.cooldown);
+    } catch (error) {
+        setNumberButtonsDisabled(false);
+        gameError(error, 'Не удалось сыграть');
+    }
+}
+
+function unlockNumbersAfter(seconds) {
+    const left = Math.max(0, Number(seconds) || 0);
+
+    if (!left) {
+        setNumberButtonsDisabled(false);
+        return;
+    }
+
+    setTimeout(() => setNumberButtonsDisabled(false), left * 1000);
+}
+
+async function loadWordle() {
+    const response = await apiFetch('/api/game/wordle');
+    const state = await response.json();
+
+    renderWordle(state);
+}
+
+async function startWordle() {
+    const button = document.getElementById('wordle-start');
+    button.disabled = true;
+
+    try {
+        const response = await apiFetch('/api/game/wordle/start', { method: 'POST' });
+        const state = await response.json();
+
+        renderWordle(state);
+    } catch (error) {
+        gameError(error, 'Не удалось начать игру');
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function submitWordleGuess(event) {
+    event.preventDefault();
+
+    const input = document.getElementById('wordle-input');
+    const message = document.getElementById('wordle-message');
+    const guess = input.value.trim();
+
+    if (guess.length !== WORD_LENGTH) {
+        message.textContent = `Нужно слово из ${WORD_LENGTH} букв`;
+        return;
+    }
+
+    input.disabled = true;
+
+    try {
+        const response = await apiFetch('/api/game/wordle/guess', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ guess })
+        });
+
+        const state = await response.json();
+
+        // Слова нет в словаре — попытка не потрачена, поле остаётся как было.
+        if (!state.success && state.unknown_word) {
+            message.textContent = state.message;
+            haptic('warning');
+            return;
+        }
+
+        if (!state.success && !state.status) {
+            message.textContent = state.message || 'Не получилось';
+            return;
+        }
+
+        input.value = '';
+        renderWordle(state);
+
+        if (state.reward) {
+            updateStatsSoon();
+            haptic('success');
+        }
+    } catch (error) {
+        gameError(error, 'Не удалось отправить слово');
+    } finally {
+        input.disabled = false;
+        input.focus();
+    }
+}
+
+function renderWordle(state) {
+    const board = document.getElementById('wordle-board');
+    const form = document.getElementById('wordle-form');
+    const startButton = document.getElementById('wordle-start');
+    const message = document.getElementById('wordle-message');
+
+    const attempts = Array.isArray(state.attempts) ? state.attempts : [];
+    renderWordleBoard(attempts, board);
+
+    const active = state.status === 'active';
+
+    form.hidden = !active;
+    startButton.hidden = active;
+
+    if (active) {
+        startButton.disabled = false;
+        message.textContent = `Осталось попыток: ${state.attempts_left}`;
+        return;
+    }
+
+    if (state.status === 'cooldown') {
+        startButton.hidden = false;
+        startButton.disabled = true;
+        startButton.textContent = 'Новое слово позже';
+
+        const outcome = state.won
+            ? `Угадано! ◆ +${state.reward}`
+            : `Слово было «${state.word || '—'}»`;
+
+        message.textContent = `${outcome}. Следующее слово через ${formatDuration(state.cooldown_left)}`;
+        return;
+    }
+
+    startButton.hidden = false;
+    startButton.disabled = false;
+    startButton.textContent = 'Загадать слово';
+    message.textContent = state.message || 'Шесть попыток на слово из пяти букв.';
+}
+
+function renderWordleBoard(attempts, board) {
+    const target = board || document.getElementById('wordle-board');
+    target.innerHTML = '';
+
+    for (let row = 0; row < WORDLE_MAX_ATTEMPTS; row += 1) {
+        const attempt = attempts[row];
+
+        for (let column = 0; column < WORD_LENGTH; column += 1) {
+            const cell = document.createElement('span');
+            cell.className = 'wordle-cell';
+
+            if (attempt) {
+                cell.textContent = (attempt.word || '')[column] || '';
+                cell.classList.add(attempt.result[column] || 'absent');
+            }
+
+            target.appendChild(cell);
+        }
+    }
+}
+
+function formatDuration(seconds) {
+    const total = Math.max(0, Number(seconds) || 0);
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.ceil((total % 3600) / 60);
+
+    if (hours && minutes) {
+        return `${hours} ч ${minutes} мин`;
+    }
+
+    if (hours) {
+        return `${hours} ч`;
+    }
+
+    return `${minutes} мин`;
+}
+
+function updateCurrency(value) {
+    if (typeof value === 'number') {
+        document.getElementById('currency').textContent = value;
+    }
+}
+
+function updateStatsSoon() {
+    loadStats().catch(logError);
 }
 
 async function loadStats() {
