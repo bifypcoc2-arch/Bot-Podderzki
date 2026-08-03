@@ -10,6 +10,7 @@
     --accent-soft: #b3a4ff;
     --gold: #ffcc66;
     --danger: #ff6b81;
+    --green: #5cc98a;
     --radius: 16px;
 }
 
@@ -467,6 +468,205 @@ h3 {
     font-weight: 700;
 }
 
+/* Игры */
+
+.game-card {
+    padding: 16px;
+    border-radius: var(--radius);
+    background: var(--card);
+    border: 1px solid var(--line);
+}
+
+.game-card + .game-card {
+    margin-top: 12px;
+}
+
+.game-rules {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--muted);
+}
+
+.primary-btn {
+    width: 100%;
+    margin-top: 14px;
+    padding: 12px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-soft));
+    color: #12142099;
+    color: #131629;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+.primary-btn:active {
+    transform: scale(0.98);
+}
+
+.primary-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+    transform: none;
+}
+
+/* Кости */
+
+.dice-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 16px;
+}
+
+.dice-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.dice-face {
+    display: grid;
+    place-items: center;
+    width: 68px;
+    height: 68px;
+    border-radius: 16px;
+    background: var(--card-hi);
+    border: 1px solid var(--line);
+    font-size: 44px;
+    line-height: 1;
+    color: var(--accent-soft);
+}
+
+.dice-face.is-rolling {
+    animation: dice-shake 0.45s ease-in-out infinite;
+}
+
+@keyframes dice-shake {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-4px) rotate(-8deg); }
+    75% { transform: translateY(4px) rotate(8deg); }
+}
+
+.dice-owner {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.dice-vs {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+}
+
+/* Шёпот цифр */
+
+.number-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.number-btn {
+    padding: 12px 0;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card-hi);
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+.number-btn:active {
+    transform: scale(0.94);
+}
+
+.number-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+    transform: none;
+}
+
+/* Вордли */
+
+.wordle-board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-top: 16px;
+}
+
+.wordle-cell {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.wordle-cell.correct {
+    background: rgba(92, 201, 138, 0.22);
+    border-color: var(--green);
+    color: var(--green);
+}
+
+.wordle-cell.present {
+    background: rgba(255, 204, 102, 0.18);
+    border-color: var(--gold);
+    color: var(--gold);
+}
+
+.wordle-cell.absent {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--muted);
+}
+
+.wordle-form {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-top: 14px;
+}
+
+.wordle-input {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card-hi);
+    color: var(--text);
+    font-size: 16px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.wordle-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.wordle-form .primary-btn {
+    width: auto;
+    margin-top: 0;
+    padding: 12px 18px;
+}
+
 /* Навигация */
 
 #navigation {
@@ -513,4 +713,5 @@ h3 {
 @media (max-width: 340px) {
     .action-text { display: none; }
     .card-grid { grid-template-columns: 1fr; }
+    .dice-face { width: 58px; height: 58px; font-size: 36px; }
 }
