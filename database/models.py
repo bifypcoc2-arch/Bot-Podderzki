@@ -213,3 +213,25 @@ class Stats(Base):
     currency: Mapped[int] = mapped_column(Integer, default=0)
 
     user: Mapped["User"] = relationship(back_populates="stats")
+
+
+class GameState(Base):
+    """Состояние мини-игр и антифарм-таймеры.
+
+    Слово вордли хранится только здесь, на сервере. Если отдавать его
+    в мини-приложение, слово видно в консоли браузера и игра теряет смысл.
+    """
+
+    __tablename__ = "game_state"
+
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.user_id"), primary_key=True)
+
+    last_dice_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    last_number_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    wordle_word: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    # JSON-список сделанных попыток, чтобы восстановить поле после закрытия окна
+    wordle_attempts: Mapped[str] = mapped_column(Text, default="[]")
+    wordle_started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    wordle_finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    wordle_won: Mapped[bool] = mapped_column(Boolean, default=False)
