@@ -9,6 +9,7 @@ from config import settings
 from database.database import init_db, async_session_maker
 from database.models import UserPet
 from handlers import support, admin, broadcast, miniapp
+from handlers import chat_admin
 from services.pet_service import PetService
 
 
@@ -95,6 +96,9 @@ async def main():
     await init_db()
 
     support.register_handlers(bot)
+    # Раньше admin: там есть обработчик всех сообщений группы, а сообщение
+    # достаётся первому подходящему обработчику.
+    chat_admin.register_handlers(bot)
     admin.register_handlers(bot)
     broadcast.register_handlers(bot)
     miniapp.register_handlers(bot)

@@ -68,6 +68,11 @@ class ActionType(enum.Enum):
     BROADCAST_SENT = "broadcast_sent"
     USER_BANNED = "user_banned"
     USER_UNBANNED = "user_unbanned"
+    MEMBER_MUTED = "member_muted"
+    MEMBER_UNMUTED = "member_unmuted"
+    MEMBER_KICKED = "member_kicked"
+    MEMBER_WARNED = "member_warned"
+    WARN_REMOVED = "warn_removed"
 
 
 class User(Base):
@@ -130,6 +135,44 @@ class Ban(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     unbanned_by: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     unbanned_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+
+class Warn(Base):
+    """Предупреждение участнику рабочей группы.
+
+    Не путать с Ban: Ban закрывает доступ к поддержке обратившемуся,
+    Warn — дисциплинарная отметка сотруднику внутри группы.
+    """
+
+    __tablename__ = "warns"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    issued_by: Mapped[int] = mapped_column(BigInteger)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    removed_by: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    removed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+
+class ChatActivity(Base):
+    """Сколько сообщений написал участник в конкретном чате.
+
+    AdminStats считает только ответы, ушедшие пользователю. Здесь —
+    весь актив в группе, включая обсуждения между сотрудниками.
+    """
+
+    __tablename__ = "chat_activity"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    username: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    messages_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_message_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 
 class Topic(Base):
