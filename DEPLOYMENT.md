@@ -22,6 +22,11 @@ docker-compose build
 docker-compose up -d
 ```
 
+If the release contains database migrations, apply them before starting:
+```bash
+docker-compose run --rm bot alembic upgrade head
+```
+
 ## Option 2: Systemd Services (Linux)
 
 ### Setup
@@ -39,8 +44,9 @@ cd /opt/telegram-bot
 sudo -u telegram-bot python3 -m venv venv
 sudo -u telegram-bot venv/bin/pip install -r requirements.txt
 
-# Initialize database
+# Initialize database and mark the current schema version
 sudo -u telegram-bot venv/bin/python init_db.py
+sudo -u telegram-bot venv/bin/alembic stamp head
 
 # Copy systemd service files
 sudo cp telegram-bot.service /etc/systemd/system/
@@ -65,10 +71,16 @@ sudo journalctl -u miniapp-web -f
 ### Update deployment
 ```bash
 cd /opt/telegram-bot
+sudo systemctl stop telegram-bot miniapp-web
+sudo -u telegram-bot cp bot.db bot.db.backup.$(date +%Y%m%d_%H%M%S)
 sudo -u telegram-bot git pull
 sudo -u telegram-bot venv/bin/pip install -r requirements.txt
-sudo systemctl restart telegram-bot miniapp-web
+sudo -u telegram-bot venv/bin/alembic upgrade head
+sudo systemctl start telegram-bot miniapp-web
 ```
+
+Always stop the services and back up the database before applying migrations.
+See `MIGRATIONS.md` for details.
 
 ## Option 3: Manual (Development/Testing)
 
@@ -117,15 +129,31 @@ FORUM_GROUP_ID=your_forum_group_id
 MINI_APP_URL=https://your-domain.com/miniapp
 ```
 
+Optional (defaults shown):
+```env
+QUEUE_WAIT_MINUTES=5
+BROADCAST_TIMEOUT_MINUTES=10
+BROADCAST_DELAY_MS=50
+WEB_HOST=0.0.0.0
+WEB_PORT=8080
+```
+
 ## Database Backup
 
+Stop the services first, or use the SQLite backup command on a live database:
+
 ```bash
-# Backup
+# Safe backup while the bot is running
+sqlite3 bot.db ".backup 'bot.db.backup.$(date +%Y%m%d_%H%M%S)'"
+
+# Backup with services stopped
 cp bot.db bot.db.backup.$(date +%Y%m%d_%H%M%S)
 
-# Restore
+# Restore (services must be stopped)
 cp bot.db.backup.YYYYMMDD_HHMMSS bot.db
 ```
+
+A plain `cp` of a database that is being written to can produce a corrupted copy.
 
 ## Monitoring
 
@@ -134,9 +162,12 @@ Check bot is responding:
 curl -s "https://api.telegram.org/bot${BOT_TOKEN}/getMe"
 ```
 
-Check web server:
+Check web server is up. All `/api/` routes require a signed
+`X-Telegram-Init-Data` header, so an unauthenticated request is expected to
+return `401` — that response still proves the server is alive:
 ```bash
-curl http://localhost:8080/api/shop
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/api/shop
+# expected: 401
 ```
 
 ## Troubleshooting
@@ -151,6 +182,15 @@ curl http://localhost:8080/api/shop
 - Check web server is running on port 8080
 - Verify Nginx proxy is configured correctly
 - Check browser console for errors
+
+**Mini App shows an authorization error:**
+- The app must be opened from inside Telegram, not in a normal browser
+- `initData` older than 24 hours is rejected — reopen the app
+- Bot and web server must use the same BOT_TOKEN
+
+**Broadcast stuck in SENDING:**
+- The process died mid-broadcast
+- Inspect the `broadcasts` table and reset the status manually before resending
 
 **Database locked errors:**
 - Ensure only one bot instance is running
