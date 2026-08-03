@@ -18,6 +18,10 @@ class PetService:
     }
 
     PARAM_DECAY_RATE = 5
+
+    # Энергия убывает медленнее остального: полный запас тратится примерно за сутки с небольшим.
+    ENERGY_DECAY_RATE = 3
+
     PARAM_DECAY_INTERVAL = 3600
 
     FEED_COOLDOWN = 300
@@ -25,6 +29,40 @@ class PetService:
     WASH_COOLDOWN = 900
     SLEEP_COOLDOWN = 1800
     TRAIN_COOLDOWN = 1200
+
+    def _apply_decay(self, pet: UserPet) -> bool:
+        """Посчитать деградацию параметров за прошедшее время.
+
+        Вызывается при каждом обращении к питомцу, поэтому значения всегда
+        актуальны на момент действия, а не на момент последнего прогона
+        фоновой задачи. Возвращает True, если что-то изменилось.
+        """
+        if not pet.last_updated:
+            pet.last_updated = datetime.utcnow()
+            return True
+
+        elapsed = (datetime.utcnow() - pet.last_updated).total_seconds()
+        cycles = int(elapsed // self.PARAM_DECAY_INTERVAL)
+
+        if cycles <= 0:
+            return False
+
+        pet.hunger = max(0, pet.hunger - self.PARAM_DECAY_RATE * cycles)
+        pet.happiness = max(0, pet.happiness - self.PARAM_DECAY_RATE * cycles)
+        pet.hygiene = max(0, pet.hygiene - self.PARAM_DECAY_RATE * cycles)
+        pet.discipline = max(0, pet.discipline - self.PARAM_DECAY_RATE * cycles)
+
+        # Главное исправление: раньше энергии здесь не было, поэтому она вечно
+        # оставалась 100 и сон всегда отвечал "питомец не устал".
+        pet.energy = max(0, pet.energy - self.ENERGY_DECAY_RATE * cycles)
+
+        # Сдвигаем на целое число циклов, а не на "сейчас": иначе остаток
+        # минут сгорает при каждом пересчёте и деградация идёт медленнее заявленной.
+        pet.last_updated = pet.last_updated + timedelta(
+            seconds=cycles * self.PARAM_DECAY_INTERVAL
+        )
+
+        return True
 
     async def get_or_create_pet(self, user_id: int) -> UserPet:
         async with async_session_maker() as session:
@@ -34,15 +72,20 @@ class PetService:
             pet = result.scalar_one_or_none()
 
             if not pet:
-                user = await self._get_or_create_user(session, user_id)
+                await self._get_or_create_user(session, user_id)
                 pet = UserPet(user_id=user_id)
                 session.add(pet)
+                await session.commit()
+                await session.refresh(pet)
+                return pet
+
+            if self._apply_decay(pet):
                 await session.commit()
                 await session.refresh(pet)
 
             return pet
 
-    async def update_parameters(self, user_id: int) -> UserPet:
+    async def update_parameters(self, user_id: int) -> Optional[UserPet]:
         async with async_session_maker() as session:
             result = await session.execute(
                 select(UserPet).where(UserPet.user_id == user_id)
@@ -52,16 +95,7 @@ class PetService:
             if not pet:
                 return None
 
-            time_elapsed = (datetime.utcnow() - pet.last_updated).total_seconds()
-            decay_cycles = int(time_elapsed / self.PARAM_DECAY_INTERVAL)
-
-            if decay_cycles > 0:
-                pet.hunger = max(0, pet.hunger - (self.PARAM_DECAY_RATE * decay_cycles))
-                pet.happiness = max(0, pet.happiness - (self.PARAM_DECAY_RATE * decay_cycles))
-                pet.hygiene = max(0, pet.hygiene - (self.PARAM_DECAY_RATE * decay_cycles))
-                pet.discipline = max(0, pet.discipline - (self.PARAM_DECAY_RATE * decay_cycles))
-                pet.last_updated = datetime.utcnow()
-
+            if self._apply_decay(pet):
                 await session.commit()
                 await session.refresh(pet)
 
@@ -76,6 +110,8 @@ class PetService:
 
             if not pet:
                 return {"success": False, "message": "Питомец не найден"}
+
+            self._apply_decay(pet)
 
             if pet.last_feed_time:
                 time_since_last = (datetime.utcnow() - pet.last_feed_time).total_seconds()
@@ -105,6 +141,8 @@ class PetService:
             if not pet:
                 return {"success": False, "message": "Питомец не найден"}
 
+            self._apply_decay(pet)
+
             if pet.last_play_time:
                 time_since_last = (datetime.utcnow() - pet.last_play_time).total_seconds()
                 if time_since_last < self.PLAY_COOLDOWN:
@@ -129,6 +167,8 @@ class PetService:
 
             if not pet:
                 return {"success": False, "message": "Питомец не найден"}
+
+            self._apply_decay(pet)
 
             if pet.last_wash_time:
                 time_since_last = (datetime.utcnow() - pet.last_wash_time).total_seconds()
@@ -157,6 +197,10 @@ class PetService:
 
             if not pet:
                 return {"success": False, "message": "Питомец не найден"}
+
+            # Сначала деградация, потом проверка "не устал": иначе сравниваем
+            # с устаревшим значением энергии.
+            self._apply_decay(pet)
 
             if pet.energy >= 100:
                 return {"success": False, "message": "Питомец не устал"}
@@ -189,6 +233,8 @@ class PetService:
             if not pet:
                 return {"success": False, "message": "Питомец не найден"}
 
+            self._apply_decay(pet)
+
             if pet.energy < 20:
                 return {"success": False, "message": "Недостаточно энергии"}
 
@@ -198,7 +244,7 @@ class PetService:
                     remaining = int(self.TRAIN_COOLDOWN - time_since_last)
                     return {"success": False, "message": f"Кулдаун. Осталось {remaining} сек"}
 
-            pet.energy -= 20
+            pet.energy = max(0, pet.energy - 20)
             pet.discipline = min(100, pet.discipline + 10)
             pet.strength = min(100, pet.strength + 5)
             pet.xp += 8
