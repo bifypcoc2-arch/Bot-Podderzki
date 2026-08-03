@@ -13,6 +13,10 @@ from services.achievement_service import AchievementService
 
 logger = logging.getLogger(__name__)
 
+# Порог параметров, без которого питомец не перейдёт на следующую стадию.
+# Должен совпадать с проверкой в PetService._check_stage_upgrade.
+GROWTH_PARAM_MINIMUM = 60
+
 
 def _bad_request(message: str) -> web.Response:
     return web.json_response({'success': False, 'message': message}, status=400)
@@ -54,10 +58,29 @@ class MiniAppAPI:
         if not pet:
             pet = await self.pet_service.get_or_create_pet(user_id)
 
+        threshold = self.pet_service.XP_THRESHOLDS.get(pet.stage)
+        # У взрослой стадии порог равен бесконечности — в JSON её не отдать,
+        # да и расти дальше некуда, поэтому отдаём null.
+        if threshold is None or threshold == float('inf'):
+            next_stage_xp = None
+        else:
+            next_stage_xp = int(threshold)
+
+        growth_ready = all([
+            pet.hunger >= GROWTH_PARAM_MINIMUM,
+            pet.happiness >= GROWTH_PARAM_MINIMUM,
+            pet.hygiene >= GROWTH_PARAM_MINIMUM,
+            pet.energy >= GROWTH_PARAM_MINIMUM,
+            pet.discipline >= GROWTH_PARAM_MINIMUM
+        ])
+
         return web.json_response({
             'pet_type': pet.pet_type.value if pet.pet_type else None,
             'stage': pet.stage.value,
             'xp': pet.xp,
+            'next_stage_xp': next_stage_xp,
+            'growth_ready': growth_ready,
+            'growth_param_minimum': GROWTH_PARAM_MINIMUM,
             'hunger': pet.hunger,
             'happiness': pet.happiness,
             'hygiene': pet.hygiene,
