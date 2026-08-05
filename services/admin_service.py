@@ -14,10 +14,20 @@ from services.telegram_errors import is_thread_missing, is_user_unreachable
 logger = logging.getLogger(__name__)
 
 
+# Минимальный уровень для режима SPEC. Раньше число 3 было зашито и в проверке
+# команды, и в проверке доступа к теме: поменяв одно, легко было забыть второе
+# и получить режим, который можно включить, но нельзя в нём писать.
+SPEC_LEVEL = 3
+
+
 CLOSED_NOTICE = (
     "✅ Обращение закрыто.\n"
     "Если вопрос остался — просто напишите снова, мы откроем новое."
 )
+
+NOT_A_TOPIC = "Эта команда доступна только в теме обращения."
+UNKNOWN_TOPIC = "Эта тема не связана ни с одним обращением."
+ALREADY_CLOSED = "Обращение закрыто — сначала дождитесь нового сообщения от пользователя."
 
 
 class AdminService:
@@ -30,7 +40,7 @@ class AdminService:
 
     async def set_topic_spec(self, message: Message, bot: AsyncTeleBot):
         if not message.message_thread_id:
-            await bot.reply_to(message, "Эта команда доступна только в теме.")
+            await bot.reply_to(message, NOT_A_TOPIC)
             return
 
         async with async_session_maker() as session:
@@ -39,53 +49,41 @@ class AdminService:
             )
             topic = result.scalar_one_or_none()
 
-            if topic:
-                topic.status = TopicStatus.SPEC
+            # Раньше бот просто молчал, и было непонятно, сработало ли.
+            if not topic:
+                await bot.reply_to(message, UNKNOWN_TOPIC)
+                return
 
-                log_entry = AdminLog(
-                    admin_user_id=message.from_user.id,
-                    action_type=ActionType.SPEC_SET,
-                    topic_id=topic.id,
-                    details=f"User {topic.user_id}"
-                )
-                session.add(log_entry)
+            # Без этой проверки /spec снимал статус CLOSED и фактически
+            # переоткрывал закрытое обращение.
+            if topic.status == TopicStatus.CLOSED:
+                await bot.reply_to(message, ALREADY_CLOSED)
+                return
 
-                await session.commit()
-                await bot.reply_to(message, "✅ Тема переведена в режим SPEC")
+            if topic.status == TopicStatus.SPEC:
+                await bot.reply_to(message, "Тема уже в режиме SPEC.")
+                return
+
+            topic.status = TopicStatus.SPEC
+
+            log_entry = AdminLog(
+                admin_user_id=message.from_user.id,
+                action_type=ActionType.SPEC_SET,
+                topic_id=topic.id,
+                details=f"User {topic.user_id}"
+            )
+            session.add(log_entry)
+
+            await session.commit()
+
+        await bot.reply_to(
+            message,
+            f"✅ Тема переведена в режим SPEC — отвечать могут только админы уровня {SPEC_LEVEL} и выше."
+        )
 
     async def unset_topic_spec(self, message: Message, bot: AsyncTeleBot):
         if not message.message_thread_id:
-            await bot.reply_to(message, "Эта команда доступна только в теме.")
-            return
-
-        async with async_session_maker() as session:
-            result = await session.execute(
-                select(Topic).where(Topic.topic_id == message.message_thread_id)
-            )
-            topic = result.scalar_one_or_none()
-
-            if topic:
-                topic.status = TopicStatus.CLAIMED
-
-                log_entry = AdminLog(
-                    admin_user_id=message.from_user.id,
-                    action_type=ActionType.SPEC_UNSET,
-                    topic_id=topic.id,
-                    details=f"User {topic.user_id}"
-                )
-                session.add(log_entry)
-
-                await session.commit()
-                await bot.reply_to(message, "✅ Режим SPEC снят")
-
-    async def close_topic(self, message: Message, bot: AsyncTeleBot):
-        """Закрывает обращение.
-
-        После этого следующее сообщение пользователя создаст новую тему:
-        _get_or_create_topic ищет только темы со статусом не CLOSED.
-        """
-        if not message.message_thread_id:
-            await bot.reply_to(message, "Эта команда доступна только в теме обращения.")
+            await bot.reply_to(message, NOT_A_TOPIC)
             return
 
         async with async_session_maker() as session:
@@ -95,7 +93,53 @@ class AdminService:
             topic = result.scalar_one_or_none()
 
             if not topic:
-                await bot.reply_to(message, "Эта тема не связана ни с одним обращением.")
+                await bot.reply_to(message, UNKNOWN_TOPIC)
+                return
+
+            if topic.status == TopicStatus.CLOSED:
+                await bot.reply_to(message, ALREADY_CLOSED)
+                return
+
+            if topic.status != TopicStatus.SPEC:
+                await bot.reply_to(message, "Тема и так не в режиме SPEC.")
+                return
+
+            # Раньше всегда ставился CLAIMED, и тема числилась "в работе"
+            # без единого ответа и без исполнителя в claimed_by.
+            topic.status = (
+                TopicStatus.CLAIMED if topic.claimed_by else TopicStatus.OPEN
+            )
+
+            log_entry = AdminLog(
+                admin_user_id=message.from_user.id,
+                action_type=ActionType.SPEC_UNSET,
+                topic_id=topic.id,
+                details=f"User {topic.user_id}"
+            )
+            session.add(log_entry)
+
+            await session.commit()
+
+        await bot.reply_to(message, "✅ Режим SPEC снят")
+
+    async def close_topic(self, message: Message, bot: AsyncTeleBot):
+        """Закрывает обращение.
+
+        После этого следующее сообщение пользователя создаст новую тему:
+        _get_or_create_topic ищет только темы со статусом не CLOSED.
+        """
+        if not message.message_thread_id:
+            await bot.reply_to(message, NOT_A_TOPIC)
+            return
+
+        async with async_session_maker() as session:
+            result = await session.execute(
+                select(Topic).where(Topic.topic_id == message.message_thread_id)
+            )
+            topic = result.scalar_one_or_none()
+
+            if not topic:
+                await bot.reply_to(message, UNKNOWN_TOPIC)
                 return
 
             if topic.status == TopicStatus.CLOSED:
@@ -178,9 +222,20 @@ class AdminService:
             if topic.status == TopicStatus.SPEC:
                 admin = await self.get_admin(message.from_user.id)
 
-                if not admin or admin.role_level < 3:
-                    await bot.delete_message(message.chat.id, message.message_id)
-                    await bot.send_message(message.chat.id, "⛔ Доступ к этой теме ограничен.", message_thread_id=message.message_thread_id)
+                if not admin or admin.role_level < SPEC_LEVEL:
+                    # Удаление может быть недоступно: у бота нет права удалять
+                    # сообщения или сообщение старше двух суток. Раньше в этом случае
+                    # падало исключение и предупреждение в тему так и не появлялось.
+                    try:
+                        await bot.delete_message(message.chat.id, message.message_id)
+                    except Exception as error:
+                        logger.warning(f"Failed to delete message in SPEC topic: {error}")
+
+                    await bot.send_message(
+                        message.chat.id,
+                        "⛔ Доступ к этой теме ограничен.",
+                        message_thread_id=message.message_thread_id
+                    )
                     return
 
             try:
@@ -196,6 +251,14 @@ class AdminService:
                     await bot.send_message(
                         message.chat.id,
                         "⚠️ Пользователь заблокировал бота — сообщение не доставлено.",
+                        message_thread_id=message.message_thread_id
+                    )
+                else:
+                    # Сетевая ошибка или 429: админ должен знать, что ответ не ушёл,
+                    # иначе он считает обращение отработанным.
+                    await bot.send_message(
+                        message.chat.id,
+                        "⚠️ Ответ не доставлен из-за ошибки Telegram. Попробуйте отправить ещё раз.",
                         message_thread_id=message.message_thread_id
                     )
 
