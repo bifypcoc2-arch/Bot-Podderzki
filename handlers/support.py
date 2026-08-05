@@ -1,10 +1,23 @@
+import logging
+
 from telebot.async_telebot import AsyncTeleBot
 from telebot.types import Message
 
-from services.support_service import SupportService
+from services.support_service import (
+    SupportService,
+    SUPPORTED_CONTENT_TYPES,
+    DELIVERED,
+    BANNED,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 BANNED_NOTICE = "⛔ Вы заблокированы в службе поддержки."
+DELIVERY_ERROR = (
+    "⚠️ Не удалось передать сообщение в поддержку. Попробуйте ещё раз через несколько минут."
+)
 
 
 def is_plain_user_message(message: Message) -> bool:
@@ -38,14 +51,24 @@ def register_handlers(bot: AsyncTeleBot):
 
     @bot.message_handler(
         func=is_plain_user_message,
-        content_types=['text', 'photo', 'video', 'document']
+        content_types=SUPPORTED_CONTENT_TYPES
     )
     async def handle_user_message(message: Message):
         support_service = SupportService()
-        delivered = await support_service.forward_to_support(message, bot)
 
-        if not delivered:
+        try:
+            status = await support_service.forward_to_support(message, bot)
+        except Exception as error:
+            logger.exception(f"Unexpected support failure for user {message.from_user.id}: {error}")
+            await bot.reply_to(message, DELIVERY_ERROR)
+            return
+
+        if status == BANNED:
             await bot.reply_to(message, BANNED_NOTICE)
+            return
+
+        if status != DELIVERED:
+            await bot.reply_to(message, DELIVERY_ERROR)
             return
 
         await bot.reply_to(message, "Ваше сообщение отправлено в службу поддержки. Ожидайте ответа.")
