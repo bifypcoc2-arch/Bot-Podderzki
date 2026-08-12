@@ -3,9 +3,10 @@ from telebot.types import Message
 
 from config import settings
 from database.models import OWNER_LEVEL
-from services.admin_service import AdminService
+from services.admin_service import AdminService, SPEC_LEVEL
 from services.chat_moderation_service import ChatModerationService
 from services.moderation_service import ModerationService
+from services.support_service import SUPPORTED_CONTENT_TYPES
 from filters.role_filter import role_filter
 
 
@@ -15,7 +16,7 @@ NO_ACCESS = "⛔ Недостаточно прав для выполнения �
 def register_handlers(bot: AsyncTeleBot):
     @bot.message_handler(commands=['spec'])
     async def cmd_spec(message: Message):
-        if not await role_filter(message, min_level=3):
+        if not await role_filter(message, min_level=SPEC_LEVEL):
             await bot.reply_to(message, NO_ACCESS)
             return
 
@@ -24,7 +25,7 @@ def register_handlers(bot: AsyncTeleBot):
 
     @bot.message_handler(commands=['unspec'])
     async def cmd_unspec(message: Message):
-        if not await role_filter(message, min_level=3):
+        if not await role_filter(message, min_level=SPEC_LEVEL):
             await bot.reply_to(message, NO_ACCESS)
             return
 
@@ -80,7 +81,7 @@ def register_handlers(bot: AsyncTeleBot):
 
     @bot.message_handler(
         func=lambda m: m.chat.id == settings.forum_group_id,
-        content_types=['text', 'photo', 'video', 'document']
+        content_types=SUPPORTED_CONTENT_TYPES
     )
     async def handle_admin_reply(message: Message):
         # Считаем актив здесь, а не в middleware: этот обработчик и так видит
