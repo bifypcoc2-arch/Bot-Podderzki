@@ -5,10 +5,16 @@ __pycache__/
 .env
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 venv/
 env/
 .vscode/
 .idea/
 *.log
+logs/
+backups/
+*.pkl
+data/
 alembic/versions/*.py
 !alembic/versions/__init__.py

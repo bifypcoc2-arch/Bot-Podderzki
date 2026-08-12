@@ -9,6 +9,7 @@ from database.models import Admin, Topic, TopicStatus, AdminLog, ActionType
 from database.database import async_session_maker
 from services.moderation_service import ModerationService
 from services.telegram_errors import is_thread_missing, is_user_unreachable
+from services.telegram_safe import try_send, OK, UNREACHABLE
 
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,11 @@ CLOSED_NOTICE = (
 NOT_A_TOPIC = "Эта команда доступна только в теме обращения."
 UNKNOWN_TOPIC = "Эта тема не связана ни с одним обращением."
 ALREADY_CLOSED = "Обращение закрыто — сначала дождитесь нового сообщения от пользователя."
+
+BLOCKED_NOTICE = "⚠️ Пользователь заблокировал бота — сообщение не доставлено."
+DELIVERY_FAILED = (
+    "⚠️ Ответ не доставлен из-за ошибки Telegram. Попробуйте отправить ещё раз."
+)
 
 
 class AdminService:
@@ -161,13 +167,11 @@ class AdminService:
 
         # Уведомление пользователя не отменяет закрытие: если он заблокировал бота,
         # тема всё равно должна закрыться.
-        try:
-            await bot.send_message(user_id, CLOSED_NOTICE)
-        except Exception as error:
-            if is_user_unreachable(error):
-                logger.info(f"User {user_id} is unreachable, close notice skipped")
-            else:
-                logger.error(f"Failed to notify user {user_id} about close: {error}")
+        status, payload = await try_send(bot.send_message, user_id, CLOSED_NOTICE)
+        if status == UNREACHABLE:
+            logger.info(f"User {user_id} is unreachable, close notice skipped")
+        elif status != OK:
+            logger.error(f"Failed to notify user {user_id} about close: {payload}")
 
         # Сворачиваем тему в Telegram, чтобы она не висела в активных.
         # Удалять нельзя: переписка нужна для разборов.
@@ -238,27 +242,31 @@ class AdminService:
                     )
                     return
 
-            try:
-                await bot.copy_message(
-                    chat_id=topic.user_id,
-                    from_chat_id=message.chat.id,
-                    message_id=message.message_id
-                )
-            except Exception as e:
-                logger.error(f"Failed to deliver reply to user {topic.user_id}: {e}")
+            # Главный путь всего бота: здесь ответ сотрудника уходит клиенту.
+            # Лимит Telegram или моргнувшая сеть больше не стоят ответа:
+            # try_send сам подождёт столько, сколько сказал Telegram, и повторит.
+            status, payload = await try_send(
+                bot.copy_message,
+                chat_id=topic.user_id,
+                from_chat_id=message.chat.id,
+                message_id=message.message_id
+            )
 
-                if is_user_unreachable(e):
+            if status != OK:
+                logger.error(f"Failed to deliver reply to user {topic.user_id}: {payload}")
+
+                if status == UNREACHABLE:
                     await bot.send_message(
                         message.chat.id,
-                        "⚠️ Пользователь заблокировал бота — сообщение не доставлено.",
+                        BLOCKED_NOTICE,
                         message_thread_id=message.message_thread_id
                     )
                 else:
-                    # Сетевая ошибка или 429: админ должен знать, что ответ не ушёл,
-                    # иначе он считает обращение отработанным.
+                    # Админ должен знать, что ответ не ушёл, иначе он считает
+                    # обращение отработанным.
                     await bot.send_message(
                         message.chat.id,
-                        "⚠️ Ответ не доставлен из-за ошибки Telegram. Попробуйте отправить ещё раз.",
+                        DELIVERY_FAILED,
                         message_thread_id=message.message_thread_id
                     )
 
